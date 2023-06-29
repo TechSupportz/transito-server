@@ -1,9 +1,9 @@
 import "dotenv/config"
 import { writeFile } from "fs"
-import { ltaAPIHeaders } from "../utils/api"
+import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
 import { BusServiceResponse } from "../types/bus-services"
 
-const busServiceApiUrl = `${process.env.LTA_API_URL}/BusServices`
+const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 
 async function getBusServices(skip: number = 0): Promise<BusServiceResponse> {
 	try {
@@ -28,13 +28,17 @@ async function generateBusServicesJson() {
 		while (true) {
 			const busServices = await getBusServices(skipNumber)
 			if (busServices.value && busServices.value.length === 0) {
-				writeFile("./output/bus_services.json", JSON.stringify(busServiceJson), (err) => {
+				writeFile("./src/json/bus_services.json", JSON.stringify(busServiceJson), (err) => {
 					if (err) {
-						console.error("❌ Error writing file", err)
+						console.error("❌ Error writing bus services file", err)
+						Promise.reject(err)
+						throw err
+					} else {
+						console.log("📄 Bus Services JSON file generated")
+						Promise.resolve()
 					}
 				})
-				console.log("🚌 Bus Services JSON file generated")
-				return true
+				break
 			} else {
 				busServiceJson.value = busServiceJson.value.concat(busServices.value)
 				skipNumber += 500

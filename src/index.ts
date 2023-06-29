@@ -1,7 +1,9 @@
+import "dotenv/config"
 import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
+import { generateJsonRoute } from "./routes/generateJson"
 
 const app = new Koa()
 const router = zodRouter()
@@ -13,6 +15,8 @@ router.get("/", async (ctx) => {
 	ctx.status = 200
 	ctx.body = "Transito's server is running as expected!"
 })
+
+router.register(generateJsonRoute)
 
 app.use(router.routes())
 
