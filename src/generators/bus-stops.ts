@@ -1,10 +1,10 @@
 import { writeFile } from "fs"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { BusStopResponse } from "../types/bus-stop"
+import { LTABusStopResponse } from "../types/bus-stop-type"
 
 const busStopApiUrl = `${ltaBaseUrl}/BusStops`
 
-async function getBusStops(skip: number = 0): Promise<BusStopResponse> {
+async function getBusStops(skip: number = 0): Promise<LTABusStopResponse> {
 	try {
 		const res = await fetch(`${busStopApiUrl}?$skip=${skip}`, {
 			headers: ltaAPIHeaders,
@@ -19,7 +19,7 @@ async function getBusStops(skip: number = 0): Promise<BusStopResponse> {
 	}
 }
 
-async function generateBusStopsJson() {
+async function generateBusStopsJSON() {
 	let skipNumber = 500
 	let busStopJson = await getBusStops()
 
@@ -46,4 +46,4 @@ async function generateBusStopsJson() {
 	}
 }
 
-export { generateBusStopsJson }
+export { generateBusStopsJSON }

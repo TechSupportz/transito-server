@@ -1,7 +1,8 @@
 import { createRouteSpec } from "koa-zod-router"
 import { z } from "zod"
-import { generateBusStopsJson } from "../generators/bus-stops"
-import { generateBusServicesJson } from "../generators/bus-services"
+import { generateBusStopsJSON } from "../generators/bus-stops"
+import { generateBusServicesJSON } from "../generators/bus-services"
+import { generateBusRoutesJSON } from "../generators/bus-routes"
 
 export const generateJsonRoute = createRouteSpec({
 	method: "post",
@@ -19,10 +20,15 @@ export const generateJsonRoute = createRouteSpec({
 		}
 
 		try {
-			await Promise.all([generateBusStopsJson(), generateBusServicesJson()])
+			await Promise.all([generateBusStopsJSON(), generateBusServicesJSON()])
+
+			const busRoutes = await generateBusRoutesJSON()
 
 			ctx.status = 200
-			ctx.body = "Generated JSON files"
+			ctx.body = {
+				message: "JSON files generated",
+				// busRoutes,
+			}
 		} catch (e) {
 			ctx.status = 500
 			ctx.body = "Internal Server Error"

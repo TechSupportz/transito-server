@@ -1,11 +1,11 @@
 import "dotenv/config"
 import { writeFile } from "fs"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { BusServiceResponse } from "../types/bus-services"
+import { LTABusServiceResponse } from "../types/bus-service-type"
 
 const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 
-async function getBusServices(skip: number = 0): Promise<BusServiceResponse> {
+async function getBusServices(skip: number = 0): Promise<LTABusServiceResponse> {
 	try {
 		const res = await fetch(`${busServiceApiUrl}?$skip=${skip}`, {
 			headers: ltaAPIHeaders,
@@ -20,7 +20,7 @@ async function getBusServices(skip: number = 0): Promise<BusServiceResponse> {
 	}
 }
 
-async function generateBusServicesJson() {
+async function generateBusServicesJSON() {
 	let skipNumber = 500
 	let busServiceJson = await getBusServices()
 
@@ -47,4 +47,4 @@ async function generateBusServicesJson() {
 	}
 }
 
-export { generateBusServicesJson }
+export { generateBusServicesJSON }
