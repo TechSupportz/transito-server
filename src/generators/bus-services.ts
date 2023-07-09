@@ -1,19 +1,27 @@
 import "dotenv/config"
-import { writeFile } from "fs"
+import {
+	BusServiceSchema,
+	LTABusService,
+	LTABusServiceResponseSchema,
+	LTABusServiceSchema,
+} from "../types/bus-service-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { LTABusServiceResponse } from "../types/bus-service-type"
+import { zodFetch } from "../utils/zod-fetch"
+import { z } from "zod"
 
 const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 
-async function getBusServices(skip: number = 0): Promise<LTABusServiceResponse> {
+async function getBusServices(skip: number = 0): Promise<LTABusService[]> {
 	try {
-		const res = await fetch(`${busServiceApiUrl}?$skip=${skip}`, {
-			headers: ltaAPIHeaders,
-		})
+		const res = await zodFetch(
+			`${busServiceApiUrl}?$skip=${skip}`,
+			{
+				headers: ltaAPIHeaders,
+			},
+			LTABusServiceResponseSchema,
+		)
 
-		if (!res.ok) throw res.statusText
-
-		return res.json()
+		return res.value
 	} catch (error) {
 		console.error(`❌ Error fetching bus services: ${error}`)
 		return Promise.reject(error)
@@ -22,25 +30,22 @@ async function getBusServices(skip: number = 0): Promise<LTABusServiceResponse> 
 
 async function generateBusServicesJSON() {
 	let skipNumber = 500
-	let busServiceJson = await getBusServices()
+	let busServiceJSON = await getBusServices()
 
-	if (busServiceJson.value) {
+	if (busServiceJSON) {
 		while (true) {
 			const busServices = await getBusServices(skipNumber)
-			if (busServices.value && busServices.value.length === 0) {
-				writeFile("./src/json/bus_services.json", JSON.stringify(busServiceJson), (err) => {
-					if (err) {
-						console.error("❌ Error writing bus services file", err)
-						Promise.reject(err)
-						throw err
-					} else {
-						console.log("📄 Bus Services JSON file generated")
-						Promise.resolve()
-					}
-				})
-				break
+			if (busServices && busServices.length === 0) {
+				const parsed = await z.array(LTABusServiceSchema).safeParseAsync(busServiceJSON)
+
+				if (!parsed.success) {
+					console.error(`❌ Error parsing bus services: ${parsed.error}`)
+					return Promise.reject(parsed.error)
+				}
+
+				return parsed.data
 			} else {
-				busServiceJson.value = busServiceJson.value.concat(busServices.value)
+				busServiceJSON = busServiceJSON.concat(busServices)
 				skipNumber += 500
 			}
 		}

@@ -4,8 +4,8 @@ export const LTABusStopSchema = z.object({
 	BusStopCode: z.string(),
 	RoadName: z.string(),
 	Description: z.string(),
-	Latitude: z.string(),
-	Longitude: z.string(),
+	Latitude: z.number(),
+	Longitude: z.number(),
 })
 
 export const LTABusStopResponseSchema = z.object({

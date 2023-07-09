@@ -1,6 +1,6 @@
 import z from "zod"
 
-const LTABusRouteSchema = z.object({
+export const LTABusRouteSchema = z.object({
 	ServiceNo: z.string(),
 	Operator: z.string(),
 	Direction: z.union([z.literal(1), z.literal(2)]),

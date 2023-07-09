@@ -1,18 +1,27 @@
 import { writeFile } from "fs"
-import { LTABusRouteResponse } from "../types/bus-route-type"
+import {
+	LTABusRoute,
+	LTABusRouteResponse,
+	LTABusRouteResponseSchema,
+	LTABusRouteSchema,
+} from "../types/bus-route-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
+import { zodFetch } from "../utils/zod-fetch"
+import {z} from "zod"
 
 const busRouteApiUrl = `${ltaBaseUrl}/BusRoutes`
 
-async function getBusRoutes(skip: number = 0): Promise<LTABusRouteResponse> {
+async function getBusRoutes(skip: number = 0): Promise<LTABusRoute[]> {
 	try {
-		const res = await fetch(`${busRouteApiUrl}?$skip=${skip}`, {
-			headers: ltaAPIHeaders,
-		})
+		const res = await zodFetch(
+			`${busRouteApiUrl}?$skip=${skip}`,
+			{
+				headers: ltaAPIHeaders,
+			},
+			LTABusRouteResponseSchema,
+		)
 
-		if (!res.ok) throw res.statusText
-
-		return res.json()
+		return res.value
 	} catch (error) {
 		console.error(`❌ Error fetching bus routes: ${error}`)
 		return Promise.reject(error)
@@ -23,13 +32,20 @@ async function generateBusRoutesJSON() {
 	let skipNumber = 500
 	let busRouteJson = await getBusRoutes()
 
-	if (busRouteJson.value) {
+	if (busRouteJson) {
 		while (true) {
 			const busRoutes = await getBusRoutes(skipNumber)
-			if (busRoutes.value && busRoutes.value.length === 0) {
-				return busRouteJson
+			if (busRoutes && busRoutes.length === 0) {
+				const parsed = await z.array(LTABusRouteSchema).safeParseAsync(busRouteJson)
+
+				if (!parsed.success) {
+					console.error(`❌ Error parsing bus routes: ${parsed.error}`)
+					return Promise.reject(parsed.error)
+				}
+
+				return parsed.data
 			} else {
-				busRouteJson.value = busRouteJson.value.concat(busRoutes.value)
+				busRouteJson = busRouteJson.concat(busRoutes)
 				skipNumber += 500
 			}
 		}

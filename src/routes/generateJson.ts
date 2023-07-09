@@ -20,14 +20,17 @@ export const generateJsonRoute = createRouteSpec({
 		}
 
 		try {
-			await Promise.all([generateBusStopsJSON(), generateBusServicesJSON()])
+			const [busStops, busServices, busRoutes] = await Promise.all([
+				generateBusStopsJSON(),
+				generateBusServicesJSON(),
+				generateBusRoutesJSON(),
+			])
 
-			const busRoutes = await generateBusRoutesJSON()
+			// console.log(busStops, busServices, busRoutes)
 
 			ctx.status = 200
 			ctx.body = {
 				message: "JSON files generated",
-				// busRoutes,
 			}
 		} catch (e) {
 			ctx.status = 500
