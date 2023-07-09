@@ -4,15 +4,17 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"dev": "nodemon ./src/index.ts",
-		"start": "ts-node ./src/index.ts",
+		"dev": "nodemon ./src/server.ts",
+		"start": "ts-node ./src/server.ts",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"nodemonConfig": {
-		"ignore": ["**/json/**"]
+		"ignore": [
+			"**/json/**"
+		]
 	},
 	"dependencies": {
 		"@koa/cors": "^4.0.0",
@@ -21,6 +23,7 @@
 		"koa-bodyparser": "^4.4.0",
 		"koa-json": "^2.0.2",
 		"koa-zod-router": "^2.0.0",
+		"lodash": "^4.17.21",
 		"zod": "^3.21.4"
 	},
 	"devDependencies": {
@@ -28,6 +31,7 @@
 		"@types/koa-bodyparser": "^4.3.10",
 		"@types/koa-json": "^2.0.20",
 		"@types/koa__cors": "^4.0.0",
+		"@types/lodash": "^4.14.195",
 		"@types/node": "^20.3.1",
 		"nodemon": "^2.0.22",
 		"ts-node": "^10.9.1",

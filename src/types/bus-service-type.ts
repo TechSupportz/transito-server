@@ -5,7 +5,7 @@ import { BusRouteStopSchema } from "./bus-route-type"
 export const LTABusServiceSchema = z.object({
 	ServiceNo: z.string(),
 	Operator: z.string(),
-	Direction: z.number(),
+	Direction: z.union([z.literal(1), z.literal(2)]),
 	Category: z.string(),
 	OriginCode: z.string(),
 	DestinationCode: z.string(),
@@ -26,7 +26,7 @@ export const BusServiceSchema = z.object({
 	operator: z.string(),
 	isLoopService: z.boolean(),
 	interchanges: z.array(SimpleBusStopSchema).length(2),
-	routes: z.array(BusRouteStopSchema).length(2),
+	routes: z.array(z.array(BusRouteStopSchema)).max(2),
 })
 
 export type LTABusService = z.infer<typeof LTABusServiceSchema>
