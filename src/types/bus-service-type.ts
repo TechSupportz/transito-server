@@ -29,6 +29,12 @@ export const BusServiceSchema = z.object({
 	routes: z.array(z.array(BusRouteStopSchema)).max(2),
 })
 
+export const BusServiceJSONSchema = z.object({
+	metadata: z.string().datetime(),
+	data: z.array(BusServiceSchema),
+})
+
 export type LTABusService = z.infer<typeof LTABusServiceSchema>
 export type LTABusServiceResponse = z.infer<typeof LTABusServiceResponseSchema>
 export type BusService = z.infer<typeof BusServiceSchema>
+export type BusServiceJSON = z.infer<typeof BusServiceJSONSchema>

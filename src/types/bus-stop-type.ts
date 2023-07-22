@@ -14,7 +14,7 @@ export const LTABusStopResponseSchema = z.object({
 })
 
 export const SimpleBusStopSchema = z.object({
-	code: z.string(),
+	code: z.string().length(5),
 	name: z.string(),
 })
 
