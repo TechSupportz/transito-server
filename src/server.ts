@@ -3,7 +3,7 @@ import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
-import { generateJsonRoute } from "./routes/generateJson"
+import { generateServicesRoute } from "./routes/generateServices"
 
 const app = new Koa()
 const router = zodRouter()
@@ -16,7 +16,7 @@ router.get("/", async (ctx) => {
 	ctx.body = "Transito's server is running as expected!"
 })
 
-router.register(generateJsonRoute)
+router.register(generateServicesRoute)
 
 app.use(router.routes())
 

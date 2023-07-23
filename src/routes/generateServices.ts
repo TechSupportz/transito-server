@@ -10,13 +10,13 @@ import {
 	BusService,
 	BusServiceJSON,
 	BusServiceJSONSchema,
-	LTABusService
+	LTABusService,
 } from "../types/bus-service-type"
 import { getBusStopFromCode } from "../utils/bus-stops"
 
-export const generateJsonRoute = createRouteSpec({
+export const generateServicesRoute = createRouteSpec({
 	method: "post",
-	path: "/generateJson",
+	path: "/generate-services",
 	validate: {
 		headers: z.object({ secret: z.string() }),
 	},
