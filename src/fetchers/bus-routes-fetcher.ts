@@ -43,17 +43,6 @@ async function generateBusRoutesJSON() {
 					return Promise.reject(parsed.error)
 				}
 
-				writeFile("./src/json/bus_routes.json", JSON.stringify(busRouteJson), (err) => {
-					if (err) {
-						console.error("❌ Error writing bus routes file", err)
-						Promise.reject(err)
-						throw err
-					} else {
-						console.log("📄 Bus Routes JSON file generated")
-						Promise.resolve()
-					}
-				})
-
 				return parsed.data
 			} else {
 				busRouteJson = busRouteJson.concat(busRoutes)
