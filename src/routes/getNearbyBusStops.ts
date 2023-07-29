@@ -11,22 +11,23 @@ export const getNearbyBusStops = createRouteSpec({
 		query: z.object({
 			latitude: z.coerce.number().min(-90).max(90),
 			longitude: z.coerce.number().min(-180).max(180),
+			range: z.coerce.number().optional().default(500),
 		}),
 	},
 	handler: async (ctx) => {
-		const { latitude, longitude } = ctx.request.query
+		const { latitude, longitude, range } = ctx.request.query
 
 		const nearbyBusStops: NearbyBusStop[] = []
 		const userLocation = { latitude, longitude }
 
 		for (const busStop of busStops.data) {
 			const busStopLocation = { latitude: busStop.latitude, longitude: busStop.longitude }
-			const distance = getDistance(userLocation, busStopLocation)
+			const distanceAway = getDistance(userLocation, busStopLocation)
 
-			if (distance <= 500) {
+			if (distanceAway <= range) {
 				nearbyBusStops.push({
 					busStop,
-					distanceAway: distance,
+					distanceAway,
 				})
 			}
 		}
