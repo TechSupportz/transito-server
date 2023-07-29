@@ -1,13 +1,11 @@
-import { writeFile } from "fs"
+import { z } from "zod"
 import {
 	LTABusRoute,
-	LTABusRouteResponse,
 	LTABusRouteResponseSchema,
-	LTABusRouteSchema,
+	LTABusRouteSchema
 } from "../types/bus-route-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
 import { zodFetch } from "../utils/zod-fetch"
-import {z} from "zod"
 
 const busRouteApiUrl = `${ltaBaseUrl}/BusRoutes`
 
@@ -53,3 +51,4 @@ async function generateBusRoutesJSON() {
 }
 
 export { generateBusRoutesJSON }
+

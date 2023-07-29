@@ -1,4 +1,3 @@
-import { writeFile } from "fs"
 import { createRouteSpec } from "koa-zod-router"
 import { groupBy } from "lodash"
 import { z } from "zod"
@@ -12,11 +11,13 @@ import {
 	BusServiceJSONSchema,
 	LTABusService,
 } from "../types/bus-service-type"
+import { BusStop, BusStopJSON, BusStopJSONSchema, LTABusStop } from "../types/bus-stop-type"
 import { getBusStopFromCode } from "../utils/bus-stops"
+import { writeJSON } from "../utils/write-json"
 
-export const generateServicesRoute = createRouteSpec({
+export const generateJSON = createRouteSpec({
 	method: "post",
-	path: "/generate-services",
+	path: "/generate-json",
 	validate: {
 		headers: z.object({ secret: z.string() }),
 	},
@@ -41,18 +42,13 @@ export const generateServicesRoute = createRouteSpec({
 				throw new Error()
 			}
 
-			const res = await transformBusServices(busRoutes, busServices)
+			const transformedBusStops = await transformBusStops(busStops, busRoutes)
 
-			writeFile("./src/json/bus_services.json", JSON.stringify(res), (err) => {
-				if (err) {
-					console.error("❌ Error writing bus services file", err)
-					Promise.reject(err)
-					throw err
-				} else {
-					console.log("📄 Bus Service JSON file generated")
-					Promise.resolve()
-				}
-			})
+			await writeJSON("bus-stops", transformedBusStops)
+
+			const transformedBusServices = await transformBusServices(busRoutes, busServices)
+
+			await writeJSON("bus-services", transformedBusServices)
 
 			ctx.status = 200
 			ctx.body = {
@@ -64,6 +60,46 @@ export const generateServicesRoute = createRouteSpec({
 		}
 	},
 })
+
+async function transformBusStops(
+	busStops: LTABusStop[],
+	busRoutes: LTABusRoute[],
+): Promise<BusStopJSON> {
+	const tempBusStops: BusStop[] = []
+
+	for (const v of busStops) {
+		const services = busRoutes.flatMap((route) => {
+			if (route.BusStopCode === v.BusStopCode) {
+				return route.ServiceNo
+			} else {
+				return []
+			}
+		})
+
+		const busStop: BusStop = {
+			code: v.BusStopCode,
+			name: v.Description,
+			roadName: v.RoadName,
+			latitude: v.Latitude,
+			longitude: v.Longitude,
+			services,
+		}
+
+		tempBusStops.push(busStop)
+	}
+
+	const parsedBusStops = await BusStopJSONSchema.safeParseAsync({
+		metadata: new Date().toISOString(),
+		data: tempBusStops,
+	})
+
+	if (!parsedBusStops.success) {
+		console.error(`❌ Error parsing bus stops: ${parsedBusStops.error}`)
+		throw new Error("Error parsing bus stops")
+	}
+
+	return parsedBusStops.data
+}
 
 async function transformBusServices(
 	busRoutes: LTABusRoute[],
@@ -83,7 +119,7 @@ async function transformBusServices(
 				return {
 					busStop: {
 						code: route.BusStopCode,
-						name: busStop?.Description ?? "",
+						name: busStop?.name ?? "",
 					},
 					direction: route.Direction,
 					sequence: route.StopSequence,
@@ -118,11 +154,11 @@ async function transformBusServices(
 			interchanges: [
 				{
 					code: v.OriginCode,
-					name: getBusStopFromCode(v.OriginCode)?.Description ?? "",
+					name: getBusStopFromCode(v.OriginCode)?.name ?? "",
 				},
 				{
 					code: v.DestinationCode,
-					name: getBusStopFromCode(v.DestinationCode)?.Description ?? "",
+					name: getBusStopFromCode(v.DestinationCode)?.name ?? "",
 				},
 			],
 			operator: v.Operator,

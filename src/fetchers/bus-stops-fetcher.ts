@@ -1,8 +1,7 @@
-import { writeFile } from "fs"
+import { z } from "zod"
 import { LTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "../types/bus-stop-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
 import { zodFetch } from "../utils/zod-fetch"
-import { z } from "zod"
 
 const busStopApiUrl = `${ltaBaseUrl}/BusStops`
 
@@ -38,17 +37,6 @@ async function generateBusStopsJSON() {
 					return Promise.reject(parsed.error)
 				}
 
-				writeFile("./src/json/bus_stops.json", JSON.stringify(busStopJSON), (err) => {
-					if (err) {
-						console.error("❌ Error writing bus stops file", err)
-						Promise.reject(err)
-						throw err
-					} else {
-						console.log("📄 Bus Stop JSON file generated")
-						Promise.resolve()
-					}
-				})
-
 				return parsed.data
 			} else {
 				busStopJSON = busStopJSON.concat(busStops)
@@ -59,3 +47,4 @@ async function generateBusStopsJSON() {
 }
 
 export { generateBusStopsJSON }
+
