@@ -3,8 +3,7 @@ import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
-import { generateJSON, getBusStop } from "./routes"
-import { ZodRouterErrorPayload } from "./types/error-type"
+import { generateJSON, getBusStop, getNearbyBusStops } from "./routes"
 
 const app = new Koa()
 const router = zodRouter({
@@ -24,6 +23,7 @@ router.get("/", async (ctx) => {
 
 router.register(generateJSON)
 router.register(getBusStop)
+router.register(getNearbyBusStops)
 
 app.use(router.routes())
 

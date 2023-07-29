@@ -7,6 +7,9 @@ dependencies:
   dotenv:
     specifier: ^16.3.1
     version: 16.3.1
+  geolib:
+    specifier: ^3.3.4
+    version: 3.3.4
   koa:
     specifier: ^2.14.2
     version: 2.14.2
@@ -498,6 +501,10 @@ packages:
 
   /function-bind@1.1.1:
     resolution: {integrity: sha512-yIovAzMX49sF8Yl58fSCWJ5svSLuaibPxXQJFLmBObTuCr0Mf1KiPopGM9NiFjiYBCbfaa2Fh6breQ6ANVTI0A==}
+    dev: false
+
+  /geolib@3.3.4:
+    resolution: {integrity: sha512-EicrlLLL3S42gE9/wde+11uiaYAaeSVDwCUIv2uMIoRBfNJCn8EsSI+6nS3r4TCKDO6+RQNM9ayLq2at+oZQWQ==}
     dev: false
 
   /get-intrinsic@1.2.1:

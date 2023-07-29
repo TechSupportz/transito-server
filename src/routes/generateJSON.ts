@@ -50,13 +50,15 @@ export const generateJSON = createRouteSpec({
 
 			await writeJSON("bus-services", transformedBusServices)
 
-			ctx.status = 200
+			ctx.status = 201
 			ctx.body = {
 				message: "JSON files generated",
 			}
+			return
 		} catch (e) {
 			ctx.status = 500
 			ctx.body = "Internal Server Error"
+			return
 		}
 	},
 })

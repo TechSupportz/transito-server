@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@koa/cors": "^4.0.0",
 		"dotenv": "^16.3.1",
+		"geolib": "^3.3.4",
 		"koa": "^2.14.2",
 		"koa-bodyparser": "^4.4.0",
 		"koa-json": "^2.0.2",
