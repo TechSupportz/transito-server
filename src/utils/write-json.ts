@@ -1,6 +1,6 @@
 import { writeFile } from "fs"
 
-export const writeJSON = async (fileName: string, data: Object) =>
+export async function writeJSON(fileName: string, data: Object) {
 	writeFile(`./src/json/${fileName.trim()}.json`, JSON.stringify(data), (err) => {
 		if (err) {
 			console.error(`❌ Error writing ${fileName} file`, err)
@@ -11,3 +11,4 @@ export const writeJSON = async (fileName: string, data: Object) =>
 			Promise.resolve()
 		}
 	})
+}
