@@ -30,7 +30,7 @@ export const BusServiceSchema = z.object({
 })
 
 export const BusServiceJSONSchema = z.object({
-	metadata: z.string().datetime(),
+	metadata: z.string().datetime({ offset: true }),
 	data: z.array(BusServiceSchema),
 })
 

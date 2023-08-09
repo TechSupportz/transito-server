@@ -28,7 +28,7 @@ export const BusStopSchema = z.object({
 })
 
 export const BusStopJSONSchema = z.object({
-	metadata: z.string().datetime(),
+	metadata: z.string().datetime({ offset: true }),
 	data: z.array(BusStopSchema),
 })
 

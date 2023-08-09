@@ -1,5 +1,6 @@
 # JSON Outputs
-json/
+*.json
+json/*.json
 
 # Logs
 logs

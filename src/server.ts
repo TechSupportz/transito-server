@@ -3,6 +3,7 @@ import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
+import { Settings } from "luxon"
 import { generateJSON, getBusService, getBusStop, getNearbyBusStops } from "./routes"
 
 const app = new Koa()
@@ -12,6 +13,8 @@ const router = zodRouter({
 		exposeResponseErrors: true,
 	},
 })
+// Default timezone set to Singapore for Luxon
+Settings.defaultLocale = "en_SG"
 
 app.use(bodyParser())
 app.use(json())

@@ -1,8 +1,8 @@
+import getDistance from "geolib/es/getDistance"
 import { createRouteSpec } from "koa-zod-router"
 import { z } from "zod"
-import { NearbyBusStop, NearbyBusStopSchema } from "../types/bus-stop-type"
 import busStops from "../json/bus-stops.json"
-import getDistance from "geolib/es/getDistance"
+import { NearbyBusStop, NearbyBusStopSchema } from "../types/bus-stop-type"
 
 export const getNearbyBusStops = createRouteSpec({
 	method: "get",

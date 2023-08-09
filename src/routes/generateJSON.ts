@@ -14,6 +14,7 @@ import {
 import { BusStop, BusStopJSON, BusStopJSONSchema, LTABusStop } from "../types/bus-stop-type"
 import { getBusStopFromCode } from "../utils/bus-stops"
 import { writeJSON } from "../utils/write-json"
+import { DateTime } from "luxon"
 
 export const generateJSON = createRouteSpec({
 	method: "post",
@@ -91,7 +92,7 @@ async function transformBusStops(
 	}
 
 	const parsedBusStops = await BusStopJSONSchema.safeParseAsync({
-		metadata: new Date().toISOString(),
+		metadata: DateTime.now().toISO(),
 		data: tempBusStops,
 	})
 
@@ -172,7 +173,7 @@ async function transformBusServices(
 	}
 
 	const parsedBusServices = await BusServiceJSONSchema.safeParseAsync({
-		metadata: new Date().toISOString(),
+		metadata: DateTime.now().toISO(),
 		data: tempBusServices,
 	})
 

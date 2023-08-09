@@ -1,6 +1,6 @@
-import busStopsJSON from "../json/bus-stops.json"
-import { BusStop } from "../types/bus-stop-type"
+import { busStops } from "../json"
+import { BusStop, BusStopJSON } from "../types/bus-stop-type"
 
 export function getBusStopFromCode(busStopCode: string): BusStop | undefined {
-	return busStopsJSON.data.find((busStop) => busStop.code === busStopCode)
+	return busStops.find((busStop) => busStop.code === busStopCode)
 }
