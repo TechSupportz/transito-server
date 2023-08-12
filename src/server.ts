@@ -4,7 +4,7 @@ import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
 import { Settings } from "luxon"
-import { generateJSON, getBusService, getBusStop, getNearbyBusStops } from "./routes"
+import { generateJSON, getBusService, getBusStop, getNearbyBusStops, searchBusStops } from "./routes"
 
 const app = new Koa()
 const router = zodRouter({
@@ -28,6 +28,7 @@ router.register(generateJSON)
 router.register(getBusStop)
 router.register(getNearbyBusStops)
 router.register(getBusService)
+router.register(searchBusStops)
 
 app.use(router.routes())
 
