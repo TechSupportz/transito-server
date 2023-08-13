@@ -5,6 +5,7 @@ import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
 import { Settings } from "luxon"
 import { generateJSON, getBusService, getBusStop, getNearbyBusStops, searchBusStops } from "./routes"
+import { searchBusServices } from "./routes/searchBusServices"
 
 const app = new Koa()
 const router = zodRouter({
@@ -24,11 +25,17 @@ router.get("/", async (ctx) => {
 	ctx.body = "Transito's server is running as expected!"
 })
 
+// JSON Routes
 router.register(generateJSON)
+
+// Bus Stop Routes
 router.register(getBusStop)
-router.register(getNearbyBusStops)
-router.register(getBusService)
 router.register(searchBusStops)
+router.register(getNearbyBusStops)
+
+// Bus Service Routes
+router.register(getBusService)
+router.register(searchBusServices)
 
 app.use(router.routes())
 

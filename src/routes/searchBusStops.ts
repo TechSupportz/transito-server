@@ -1,7 +1,6 @@
 import { createRouteSpec } from "koa-zod-router"
 import MiniSearch from "minisearch"
 import { z } from "zod"
-import { BusStop } from "../types/bus-stop-type"
 import { busStops } from "../json"
 import { isBusStopCode } from "../utils/bus-stops"
 
