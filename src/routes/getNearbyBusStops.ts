@@ -1,7 +1,7 @@
 import getDistance from "geolib/es/getDistance"
 import { createRouteSpec } from "koa-zod-router"
 import { z } from "zod"
-import busStops from "../json/bus-stops.json"
+import { busStops } from "../json"
 import { NearbyBusStop, NearbyBusStopSchema } from "../types/bus-stop-type"
 
 export const getNearbyBusStops = createRouteSpec({
@@ -20,7 +20,7 @@ export const getNearbyBusStops = createRouteSpec({
 		const nearbyBusStops: NearbyBusStop[] = []
 		const userLocation = { latitude, longitude }
 
-		for (const busStop of busStops.data) {
+		for (const busStop of busStops) {
 			const busStopLocation = { latitude: busStop.latitude, longitude: busStop.longitude }
 			const distanceAway = getDistance(userLocation, busStopLocation)
 
