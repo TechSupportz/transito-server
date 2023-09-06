@@ -4,7 +4,13 @@ import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import { zodRouter } from "koa-zod-router"
 import { Settings } from "luxon"
-import { generateJSON, getBusService, getBusStop, getNearbyBusStops, searchBusStops } from "./routes"
+import {
+	generateJSON,
+	getBusService,
+	getBusStop,
+	getNearbyBusStops,
+	searchBusStops,
+} from "./routes"
 import { searchBusServices } from "./routes/searchBusServices"
 
 const app = new Koa()
@@ -39,6 +45,8 @@ router.register(searchBusServices)
 
 app.use(router.routes())
 
-app.listen(8080, () => {
-	console.log(`Server running on http://localhost:8080`)
+const PORT = process.env.PORT || 8080
+
+app.listen(PORT, () => {
+	console.log(`Server running on port ${PORT}`)
 })

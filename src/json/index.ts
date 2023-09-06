@@ -1,6 +1,6 @@
 import { DateTime } from "luxon"
-import busServiceJSON from "../json/bus-services.json"
-import busStopJSON from "../json/bus-stops.json"
+import busServiceJSON from "./bus-services.json"
+import busStopJSON from "./bus-stops.json"
 import { BusServiceJSON } from "../types/bus-service-type"
 import { BusStopJSON } from "../types/bus-stop-type"
 

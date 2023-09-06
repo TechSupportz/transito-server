@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+    transito-flutter:
+        build: .
+        working_dir: /app
+        container_name: transito-server
+        image: techsupportz/transito-server
+        ports:
+            - "8080:8080"
+        env_file:
+            - .env

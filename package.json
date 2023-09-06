@@ -5,7 +5,10 @@
 	"main": "index.js",
 	"scripts": {
 		"dev": "nodemon ./src/server.ts",
-		"start": "ts-node ./src/server.ts",
+		"build": "rm -rf dist/* && tsc",
+		"start": "node ./dist/server.js",
+		"docker:build": "docker compose up --build",
+		"docker:start": "docker start transito-server",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [],
@@ -16,6 +19,7 @@
 			"**/json/**"
 		]
 	},
+	"packageManager": "pnpm@8.7.0",
 	"dependencies": {
 		"@koa/cors": "^4.0.0",
 		"dotenv": "^16.3.1",
