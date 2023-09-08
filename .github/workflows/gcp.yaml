@@ -28,10 +28,13 @@ jobs:
             - name: Configure Docker Client
               run: gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
 
+            - name: Create ENV file for Docker Compose
+              run: |
+                  touch .env
+                  echo LTA_API_KEY=${{ secrets.LTA_API_KEY }} >> .env
+                  echo SECRET=${{ secrets.JSON_SECRET }} >> .env
+
             - name: Build and push image to Artifact Registry
-              env:
-                  LTA_API_KEY: ${{ secrets.LTA_API_KEY }}
-                  SECRET: ${{ secrets.JSON_SECRET }}
               run: |
                   docker compose build
                   docker compose push
