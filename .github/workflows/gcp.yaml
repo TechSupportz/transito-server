@@ -1,32 +1,38 @@
 name: Build and push Transito Server Docker image to Google Cloud Platform
 
 on:
-  push:
-    branches: [ main ]
+    push:
+        branches: [main]
 
 jobs:
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
+    deploy:
+        name: Deploy
+        runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+        permissions:
+            contents: "read"
+            id-token: "write"
 
-    - name: Install gcloud cli
-      uses: google-github-actions/setup-gcloud@v0
-      with:
-        project_id: ${{ secrets.GCE_PROJECT}}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
 
-    - name: Configure Docker Client
-      run: gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
-    
-    - name: Build and push image to Artifact Registry
-      env:
-        LTA_API_KEY: ${{ secrets.LTA_API_KEY }}
-        SECRET: ${{ secrets.JSON_SECRET }}
-      run: |
-        docker compose build
-        docker compose push
+            - id: auth
+              uses: google-github-actions/auth@v1
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+                  export_default_credentials: true
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v1
+
+            - name: Configure Docker Client
+              run: gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
+
+            - name: Build and push image to Artifact Registry
+              env:
+                  LTA_API_KEY: ${{ secrets.LTA_API_KEY }}
+                  SECRET: ${{ secrets.JSON_SECRET }}
+              run: |
+                  docker compose build
+                  docker compose push
