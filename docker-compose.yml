@@ -4,7 +4,7 @@ services:
         build: .
         working_dir: /app
         container_name: transito-server
-        image: us-west1-docker.pkg.dev/transito-8f50c/transito-server:latest
+        image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/transito-server:latest
         ports:
             - "8080:8080"
         env_file:
