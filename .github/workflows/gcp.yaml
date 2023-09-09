@@ -39,3 +39,7 @@ jobs:
               run: |
                   docker compose build
                   docker compose push
+
+            - name: Restart Cloud Engine to use new image
+              run: |
+                  gcloud compute instances reset transito-server --zone=us-west1-b
