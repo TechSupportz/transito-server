@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "nodemon ./src/server.ts",
 		"build": "rm -rf dist/* && tsc",
-		"start": "node ./dist/server.js",
+		"start": "node --watch-path=dist/json dist/server.js",
 		"docker:build": "docker compose up --build",
 		"docker:start": "docker start transito-server",
 		"test": "echo \"Error: no test specified\" && exit 1"

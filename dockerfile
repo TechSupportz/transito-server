@@ -29,4 +29,4 @@ COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 8080
 
-CMD [ "node", "dist/server.js" ]
+CMD [ "node", "--watch-path=dist/json dist/server.js" ]
