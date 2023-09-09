@@ -33,6 +33,7 @@ jobs:
                   touch .env
                   echo LTA_API_KEY=${{ secrets.LTA_API_KEY }} >> .env
                   echo SECRET=${{ secrets.JSON_SECRET }} >> .env
+                  echo PORT=80 >> .env
 
             - name: Build and push image to Artifact Registry
               run: |

@@ -6,6 +6,6 @@ services:
         container_name: transito-server
         image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/transito-server:latest
         ports:
-            - "8080:8080"
+            - "80:80"
         env_file:
             - .env
