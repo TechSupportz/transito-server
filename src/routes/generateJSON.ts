@@ -55,7 +55,12 @@ export const generateJSON = createRouteSpec({
 			ctx.body = {
 				message: "JSON files generated",
 			}
-			return
+
+			setTimeout(() => {
+				console.log("Restarting server...")
+				process.exit()
+			}, 5000)
+
 		} catch (e) {
 			ctx.status = 500
 			ctx.body = "Internal Server Error"

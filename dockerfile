@@ -27,6 +27,6 @@ WORKDIR /app
 COPY --from=build /app/dist/ ./dist/
 COPY --from=build /app/node_modules ./node_modules
 
-EXPOSE 8080
+EXPOSE 80
 
-CMD [ "node", "--watch-path=dist/json dist/server.js" ]
+CMD [ "node", "dist/server.js" ]
