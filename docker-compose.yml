@@ -7,6 +7,6 @@ services:
         image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/transito-server:latest
         restart: unless-stopped
         ports:
-            - "80:80"
+            - "443:443"
         env_file:
             - .env
