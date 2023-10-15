@@ -12,19 +12,23 @@ import {
 	searchBusStops,
 } from "./routes"
 import { searchBusServices } from "./routes/searchBusServices"
+import KoaLogger from "koa-logger"
+import { getBusStopServices } from "./routes/getBusStopServices"
 
 const app = new Koa()
 const router = zodRouter({
 	zodRouter: {
 		exposeRequestErrors: true,
-		exposeResponseErrors: true,
+		exposeResponseErrors: process.env.ENV === "dev" ? true : false,
 	},
 })
+
 // Default timezone set to Singapore for Luxon
 Settings.defaultLocale = "en_SG"
 
 app.use(bodyParser())
 app.use(json())
+app.use(KoaLogger())
 
 router.get("/", async (ctx) => {
 	ctx.status = 200
@@ -38,6 +42,7 @@ router.register(generateJSON)
 router.register(getBusStop)
 router.register(searchBusStops)
 router.register(getNearbyBusStops)
+router.register(getBusStopServices)
 
 // Bus Service Routes
 router.register(getBusService)

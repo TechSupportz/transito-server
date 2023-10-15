@@ -2,6 +2,9 @@
 *.json
 json/*.json
 
+# MacOS
+.DS_Store
+
 # Logs
 logs
 *.log
