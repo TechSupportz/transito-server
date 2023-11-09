@@ -8,13 +8,13 @@ export const searchBusServices = createRouteSpec({
 	path: "/search/bus-services",
 	validate: {
 		query: z.object({
-			search: z
+			query: z
 				.string({ required_error: "Search query is required" })
 				.min(1, { message: "Search query must be at least 1 character long" }),
 		}),
 	},
 	handler: async (ctx) => {
-		const { search } = ctx.request.query
+		const { query } = ctx.request.query
 
 		const ms = new MiniSearch({
 			fields: ["serviceNo"],
@@ -27,12 +27,13 @@ export const searchBusServices = createRouteSpec({
 
 		ms.addAll(busServices)
 
-		const res = ms.search(search)
+		const res = ms.search(query)
 
 		if (res.length === 0) {
-			ctx.status = 404
 			ctx.body = {
 				message: "No bus services found",
+				count: 0,
+				data: [],
 			}
 			return
 		}
@@ -45,6 +46,7 @@ export const searchBusServices = createRouteSpec({
 		ctx.status = 200
 		ctx.body = {
 			message: "Bus services found",
+			count: res.length,
 			data: searchResults,
 		}
 		return
