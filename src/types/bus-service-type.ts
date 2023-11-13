@@ -26,7 +26,7 @@ export const BusServiceSchema = z.object({
 	operator: z.string(),
 	isLoopService: z.boolean(),
 	interchanges: z.array(SimpleBusStopSchema).length(2),
-	routes: z.array(z.array(BusRouteStopSchema)).max(2),
+	routes: z.array(z.array(BusRouteStopSchema)).max(2).optional(),
 })
 
 export const BusServiceJSONSchema = z.object({
