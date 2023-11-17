@@ -60,7 +60,6 @@ export const generateJSON = createRouteSpec({
 				console.log("Restarting server...")
 				process.exit()
 			}, 5000)
-
 		} catch (e) {
 			ctx.status = 500
 			ctx.body = "Internal Server Error"
@@ -90,7 +89,7 @@ async function transformBusStops(
 			roadName: v.RoadName,
 			latitude: v.Latitude,
 			longitude: v.Longitude,
-			services,
+			services: [...new Set(services)],
 		}
 
 		tempBusStops.push(busStop)
