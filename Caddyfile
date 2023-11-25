@@ -1,7 +1,0 @@
-{
-	email tnitish654@gmail.com
-}
-
-api.transito.tnitish.com {
-	reverse_proxy transito-server:4000
-}
