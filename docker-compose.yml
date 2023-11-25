@@ -1,14 +1,24 @@
 version: "3.9"
 services:
-    transito-flutter:
+    transito-server:
         build: .
         working_dir: /app
         container_name: transito-server
         image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/transito-server:latest
         restart: unless-stopped
         ports:
-            - "80:8080"
-            - "443:8080"
-            - "8080:8080"
+            - "4000:4000"
         env_file:
             - .env
+
+    caddy:
+        image: caddy:2.7.5-alpine
+        container_name: caddy
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile:ro
+            - /app # Adjust the path to your static site or app
+        depends_on:
+            - transito-server
