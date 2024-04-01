@@ -1,7 +1,14 @@
 import { busStops } from "../json"
-import { BusStop } from "../types/bus-stop-type"
+import { BusStop, BusStopJSON } from "../types/bus-stop-type"
 
-export function getBusStopFromCode(busStopCode: string): BusStop | undefined {
+export function getBusStopFromCode(
+	busStopCode: string,
+	busStopData?: BusStopJSON["data"],
+): BusStop | undefined {
+	if (busStopData) {
+		return busStopData.find((busStop) => busStop.code === busStopCode)
+	}
+
 	return busStops.find((busStop) => busStop.code === busStopCode)
 }
 

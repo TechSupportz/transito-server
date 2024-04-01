@@ -15,7 +15,7 @@ export const getBusService = createRouteSpec({
 	},
 	handler: async (ctx) => {
 		const { serviceNo } = ctx.params
-		const includeRoutes = ctx.query.includeRoutes === ''
+		const includeRoutes = ctx.query.includeRoutes === ""
 
 		const busService = getBusServiceFromServiceNo(serviceNo)
 

@@ -47,7 +47,11 @@ export const generateJSON = createRouteSpec({
 
 			await writeJSON("bus-stops", transformedBusStops)
 
-			const transformedBusServices = await transformBusServices(busRoutes, busServices)
+			const transformedBusServices = await transformBusServices(
+				busRoutes,
+				busServices,
+				transformedBusStops.data,
+			)
 
 			await writeJSON("bus-services", transformedBusServices)
 
@@ -111,6 +115,7 @@ async function transformBusStops(
 async function transformBusServices(
 	busRoutes: LTABusRoute[],
 	busServices: LTABusService[],
+	busStopData: BusStop[],
 ): Promise<BusServiceJSON> {
 	const tempBusServices: BusService[] = []
 
@@ -121,7 +126,7 @@ async function transformBusServices(
 
 		const parsedBusRoutes = busRoutes.flatMap((route) => {
 			if (route.ServiceNo === v.ServiceNo) {
-				const busStop = getBusStopFromCode(route.BusStopCode)
+				const busStop = getBusStopFromCode(route.BusStopCode, busStopData)
 
 				return {
 					busStop: {
@@ -159,8 +164,8 @@ async function transformBusServices(
 			throw new Error("Error parsing bus route")
 		}
 
-		const originBusStopInfo = getBusStopFromCode(v.OriginCode)
-		const destinationBusStopInfo = getBusStopFromCode(v.DestinationCode)
+		const originBusStopInfo = getBusStopFromCode(v.OriginCode, busStopData)
+		const destinationBusStopInfo = getBusStopFromCode(v.DestinationCode, busStopData)
 
 		const busService: BusService = {
 			serviceNo: v.ServiceNo,
