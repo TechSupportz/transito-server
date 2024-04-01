@@ -4,7 +4,7 @@ import { z } from "zod"
 import { generateBusRoutesJSON } from "../fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "../fetchers/bus-services-fetcher"
 import { generateBusStopsJSON } from "../fetchers/bus-stops-fetcher"
-import { BusRouteStopSchema, LTABusRoute } from "../types/bus-route-type"
+import { BusRouteStop, BusRouteStopSchema, LTABusRoute } from "../types/bus-route-type"
 import {
 	BusService,
 	BusServiceJSON,
@@ -127,6 +127,9 @@ async function transformBusServices(
 					busStop: {
 						code: route.BusStopCode,
 						name: busStop?.name ?? "",
+						roadName: busStop?.roadName ?? "",
+						latitude: busStop?.latitude ?? 0,
+						longitude: busStop?.longitude ?? 0,
 					},
 					direction: route.Direction,
 					sequence: route.StopSequence,
@@ -141,7 +144,7 @@ async function transformBusServices(
 						saturday: route.SAT_LastBus,
 						sunday: route.SUN_LastBus,
 					},
-				}
+				} satisfies BusRouteStop
 			} else {
 				return []
 			}
@@ -156,16 +159,25 @@ async function transformBusServices(
 			throw new Error("Error parsing bus route")
 		}
 
+		const originBusStopInfo = getBusStopFromCode(v.OriginCode)
+		const destinationBusStopInfo = getBusStopFromCode(v.DestinationCode)
+
 		const busService: BusService = {
 			serviceNo: v.ServiceNo,
 			interchanges: [
 				{
 					code: v.OriginCode,
-					name: getBusStopFromCode(v.OriginCode)?.name ?? "",
+					name: originBusStopInfo?.name ?? "",
+					roadName: originBusStopInfo?.roadName ?? "",
+					latitude: originBusStopInfo?.latitude ?? 0,
+					longitude: originBusStopInfo?.longitude ?? 0,
 				},
 				{
 					code: v.DestinationCode,
-					name: getBusStopFromCode(v.DestinationCode)?.name ?? "",
+					name: destinationBusStopInfo?.name ?? "",
+					roadName: destinationBusStopInfo?.roadName ?? "",
+					latitude: destinationBusStopInfo?.latitude ?? 0,
+					longitude: destinationBusStopInfo?.longitude ?? 0,
 				},
 			],
 			operator: v.Operator,

@@ -13,11 +13,6 @@ export const LTABusStopResponseSchema = z.object({
 	value: z.array(LTABusStopSchema),
 })
 
-export const SimpleBusStopSchema = z.object({
-	code: z.string().length(5),
-	name: z.string(),
-})
-
 export const BusStopSchema = z.object({
 	code: z.string().length(5),
 	name: z.string(),
@@ -41,7 +36,6 @@ export const BusStopSearchSchema = BusStopSchema.omit({ services: true })
 
 export type LTABusStop = z.infer<typeof LTABusStopSchema>
 export type LTABusStopResponse = z.infer<typeof LTABusStopResponseSchema>
-export type SimpleBusStop = z.infer<typeof SimpleBusStopSchema>
 export type BusStop = z.infer<typeof BusStopSchema>
 export type BusStopJSON = z.infer<typeof BusStopJSONSchema>
 export type NearbyBusStop = z.infer<typeof NearbyBusStopSchema>

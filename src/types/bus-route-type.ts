@@ -1,5 +1,5 @@
 import z from "zod"
-import { SimpleBusStopSchema } from "./bus-stop-type"
+import { BusStopSearchSchema } from "./bus-stop-type"
 
 export const LTABusRouteSchema = z.object({
 	ServiceNo: z.string(),
@@ -28,7 +28,7 @@ const BusScheduleSchema = z.object({
 })
 
 export const BusRouteStopSchema = z.object({
-	busStop: SimpleBusStopSchema,
+	busStop: BusStopSearchSchema,
 	direction: z.union([z.literal(1), z.literal(2)]),
 	sequence: z.number(),
 	distance: z.number(),
