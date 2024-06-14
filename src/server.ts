@@ -14,6 +14,7 @@ import {
 import { searchBusServices } from "./routes/searchBusServices"
 import KoaLogger from "koa-logger"
 import { getBusStopServices } from "./routes/getBusStopServices"
+import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
 
 const app = new Koa()
 const router = zodRouter({
@@ -32,7 +33,10 @@ app.use(KoaLogger())
 
 router.get("/", async (ctx) => {
 	ctx.status = 200
-	ctx.body = "Transito's server is running as expected!"
+	ctx.body = {
+		message: "Transito's server is running as expected!",
+		last_updated: { bus_stop: busStopUpdatedAt, bus_service: busServiceUpdatedAt },
+	}
 })
 
 // JSON Routes
