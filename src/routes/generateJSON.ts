@@ -187,6 +187,7 @@ async function transformBusServices(
 			],
 			operator: v.Operator,
 			isLoopService: v.LoopDesc !== "",
+			isSingleRoute: routes.length === 1,
 			routes,
 		}
 

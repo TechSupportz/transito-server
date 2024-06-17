@@ -19,7 +19,7 @@ export const searchBusServices = createRouteSpec({
 		const ms = new MiniSearch({
 			fields: ["serviceNo"],
 			idField: "serviceNo",
-			storeFields: ["serviceNo", "operator", "isLoopService", "interchanges"],
+			storeFields: ["serviceNo", "operator", "isLoopService", "isSingleRoute", "interchanges"],
 			searchOptions: {
 				prefix: true,
 			},
