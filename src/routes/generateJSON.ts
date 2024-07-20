@@ -140,14 +140,14 @@ async function transformBusServices(
 					sequence: route.StopSequence,
 					distance: route.Distance,
 					firstBus: {
-						weekdays: route.WD_FirstBus,
-						saturday: route.SAT_FirstBus,
-						sunday: route.SUN_FirstBus,
+						weekdays: route.WD_FirstBus.split("").toSpliced(2, 0, ":").join(""),
+						saturday: route.SAT_FirstBus.split("").toSpliced(2, 0, ":").join(""),
+						sunday: route.SUN_FirstBus.split("").toSpliced(2, 0, ":").join(""),
 					},
 					lastBus: {
-						weekdays: route.WD_LastBus,
-						saturday: route.SAT_LastBus,
-						sunday: route.SUN_LastBus,
+						weekdays: route.WD_LastBus.split("").toSpliced(2, 0, ":").join(""),
+						saturday: route.SAT_LastBus.split("").toSpliced(2, 0, ":").join(""),
+						sunday: route.SUN_LastBus.split("").toSpliced(2, 0, ":").join(""),
 					},
 				} satisfies BusRouteStop
 			} else {
