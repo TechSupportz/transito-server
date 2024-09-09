@@ -33,11 +33,11 @@ jobs:
                   touch .env
                   echo LTA_API_KEY=${{ secrets.LTA_API_KEY }} >> .env
                   echo SECRET=${{ secrets.JSON_SECRET }} >> .env
-                  echo PORT=80 >> .env
+                  echo PORT=8080 >> .env
 
             - name: Build and push image to Artifact Registry
               run: |
-                  docker compose build
+                  docker compose up --build -d
                   docker compose push
 
             - name: Restart Cloud Engine to use new image
