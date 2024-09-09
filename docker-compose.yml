@@ -10,9 +10,9 @@ services:
             - .env
 
     nginx:
-        build: .
+        build: us-west1-docker.pkg.dev/transito-8f50c/transito-server/nginx:latest
         container_name: nginx
-        image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/nginx:latest
+        image: nginx
         restart: unless-stopped
         ports:
             - 80:80
@@ -23,9 +23,9 @@ services:
             - ./certbot/www:/var/www/certbot
 
     certbot:
-        build: .
+        build: us-west1-docker.pkg.dev/transito-8f50c/transito-server/certbot:latest
         container_name: certbot
-        image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/certbot/certbot:latest
+        image: certbot/certbot
         volumes:
             - ./certbot/conf:/etc/letsencrypt
             - ./certbot/www:/var/www/certbot
