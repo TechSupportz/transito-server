@@ -37,7 +37,7 @@ jobs:
 
             - name: Build and push image to Artifact Registry
               run: |
-                  docker compose up --build -d
+                  docker compose up -d
                   docker compose push
 
             - name: Restart Cloud Engine to use new image
