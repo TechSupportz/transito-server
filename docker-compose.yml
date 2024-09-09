@@ -6,9 +6,25 @@ services:
         container_name: transito-server
         image: us-west1-docker.pkg.dev/transito-8f50c/transito-server/transito-server:latest
         restart: unless-stopped
-        ports:
-            - "80:8080"
-            - "443:8080"
-            - "8080:8080"
         env_file:
             - .env
+
+    nginx:
+        container_name: nginx
+        image: nginx
+        restart: unless-stopped
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./certbot/conf:/etc/letsencrypt
+            - ./certbot/www:/var/www/certbot
+
+    certbot:
+        container_name: certbot
+        image: certbot/certbot
+        volumes:
+            - ./certbot/conf:/etc/letsencrypt
+            - ./certbot/www:/var/www/certbot
+        command: certonly --webroot -w /var/www/certbot --force-renewal --email transito@tnitish.com -d api.transito.tnitish.com --agree-tos
