@@ -10,6 +10,7 @@ services:
             - .env
 
     nginx:
+        build: .
         container_name: nginx
         image: nginx
         restart: unless-stopped
@@ -22,6 +23,7 @@ services:
             - ./certbot/www:/var/www/certbot
 
     certbot:
+        build: .
         container_name: certbot
         image: certbot/certbot
         volumes:
