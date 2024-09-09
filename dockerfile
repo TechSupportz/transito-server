@@ -27,10 +27,6 @@ WORKDIR /app
 COPY --from=build /app/dist/ ./dist/
 COPY --from=build /app/node_modules ./node_modules
 
-# copy over nginx and certbot configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY certbot /var/www/certbot
-
 EXPOSE 80 443
 
 CMD [ "node", "dist/server.js" ]
