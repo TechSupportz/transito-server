@@ -2,8 +2,11 @@ import "dotenv/config"
 import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
+import KoaLogger from "koa-logger"
 import { zodRouter } from "koa-zod-router"
+import { toInteger } from "lodash"
 import { Settings } from "luxon"
+import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
 import {
 	generateJSON,
 	getBusService,
@@ -11,10 +14,8 @@ import {
 	getNearbyBusStops,
 	searchBusStops,
 } from "./routes"
-import { searchBusServices } from "./routes/searchBusServices"
-import KoaLogger from "koa-logger"
 import { getBusStopServices } from "./routes/getBusStopServices"
-import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
+import { searchBusServices } from "./routes/searchBusServices"
 
 const app = new Koa()
 const router = zodRouter({
@@ -30,6 +31,19 @@ Settings.defaultLocale = "en_SG"
 app.use(bodyParser())
 app.use(json())
 app.use(KoaLogger())
+
+// Middleware to handle request delay for development environment
+app.use(async (ctx, next) => {
+	if (process.env.ENV !== "dev") {
+		await next()
+		return
+	}
+
+	const delay = 1000
+	ctx.set("x-delay", `${delay}ms`)
+	await new Promise((resolve) => setTimeout(resolve, delay))
+	await next()
+})
 
 router.get("/", async (ctx) => {
 	ctx.status = 200
