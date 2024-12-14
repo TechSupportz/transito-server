@@ -2,9 +2,8 @@ import { createRouteSpec } from "koa-zod-router"
 import MiniSearch from "minisearch"
 import { z } from "zod"
 import { busStops } from "../json"
+import { BasicBusStopSchema } from "../types/bus-stop-type"
 import { isBusStopCode } from "../utils/bus-stops"
-import { BusStopSearchSchema } from "../types/bus-stop-type"
-import { get } from "lodash"
 
 export const searchBusStops = createRouteSpec({
 	method: "get",
@@ -18,7 +17,7 @@ export const searchBusStops = createRouteSpec({
 		const { query } = ctx.request.query
 
 		const ms = new MiniSearch({
-			fields: ["name", "roadName", "code"],
+			fields: ["name", "roadName", "code", "searchTags"],
 			idField: "code",
 			storeFields: ["name", "roadName", "code", "latitude", "longitude"],
 			searchOptions: {
@@ -31,7 +30,7 @@ export const searchBusStops = createRouteSpec({
 						? false
 						: true,
 				combineWith: "AND",
-				boost: { name: 2, roadName: 1 },
+				boost: { name: 2, searchTags: 2, roadName: 1 },
 			},
 		})
 
@@ -55,7 +54,7 @@ export const searchBusStops = createRouteSpec({
 			})
 
 			const parsedSearchResults = await z
-				.array(BusStopSearchSchema)
+				.array(BasicBusStopSchema)
 				.safeParseAsync(cleanedSearchResults)
 
 			if (!parsedSearchResults.success) {

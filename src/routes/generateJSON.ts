@@ -1,5 +1,6 @@
 import { createRouteSpec } from "koa-zod-router"
 import { groupBy } from "lodash"
+import { DateTime } from "luxon"
 import { z } from "zod"
 import { generateBusRoutesJSON } from "../fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "../fetchers/bus-services-fetcher"
@@ -11,10 +12,14 @@ import {
 	BusServiceJSONSchema,
 	LTABusService,
 } from "../types/bus-service-type"
-import { BusStop, BusStopJSON, BusStopJSONSchema, LTABusStop } from "../types/bus-stop-type"
-import { getBusStopFromCode } from "../utils/bus-stops"
+import {
+	BusStopJSON,
+	BusStopJSONSchema,
+	LTABusStop,
+	TaggedBusStop
+} from "../types/bus-stop-type"
+import { generateSearchTags, getBusStopFromCode } from "../utils/bus-stops"
 import { writeJSON } from "../utils/write-json"
-import { DateTime } from "luxon"
 
 export const generateJSON = createRouteSpec({
 	method: "post",
@@ -76,7 +81,7 @@ async function transformBusStops(
 	busStops: LTABusStop[],
 	busRoutes: LTABusRoute[],
 ): Promise<BusStopJSON> {
-	const tempBusStops: BusStop[] = []
+	const tempBusStops: TaggedBusStop[] = []
 
 	for (const v of busStops) {
 		const services = busRoutes.flatMap((route) => {
@@ -86,14 +91,16 @@ async function transformBusStops(
 				return []
 			}
 		})
+		const searchTags = generateSearchTags(v.Description)
 
-		const busStop: BusStop = {
+		const busStop: TaggedBusStop = {
 			code: v.BusStopCode,
 			name: v.Description,
 			roadName: v.RoadName,
 			latitude: v.Latitude,
 			longitude: v.Longitude,
 			services: [...new Set(services)],
+			searchTags,
 		}
 
 		tempBusStops.push(busStop)
@@ -115,7 +122,7 @@ async function transformBusStops(
 async function transformBusServices(
 	busRoutes: LTABusRoute[],
 	busServices: LTABusService[],
-	busStopData: BusStop[],
+	busStopData: TaggedBusStop[],
 ): Promise<BusServiceJSON> {
 	const tempBusServices: BusService[] = []
 

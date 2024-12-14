@@ -1,6 +1,6 @@
 import z from "zod"
 import { BusRouteStopSchema } from "./bus-route-type"
-import { BusStopSearchSchema } from "./bus-stop-type"
+import { BasicBusStopSchema } from "./bus-stop-type"
 
 export const LTABusServiceSchema = z.object({
 	ServiceNo: z.string(),
@@ -26,7 +26,7 @@ export const BusServiceSchema = z.object({
 	operator: z.string(),
 	isLoopService: z.boolean(),
 	isSingleRoute: z.boolean(),
-	interchanges: z.array(BusStopSearchSchema).length(2),
+	interchanges: z.array(BasicBusStopSchema).length(2),
 	routes: z.array(z.array(BusRouteStopSchema)).max(2).optional(),
 })
 
