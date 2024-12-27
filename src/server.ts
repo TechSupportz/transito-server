@@ -4,7 +4,6 @@ import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import KoaLogger from "koa-logger"
 import { zodRouter } from "koa-zod-router"
-import { toInteger } from "lodash"
 import { Settings } from "luxon"
 import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
 import {
