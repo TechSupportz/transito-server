@@ -38,7 +38,7 @@ app.use(async (ctx, next) => {
 		return
 	}
 
-	const delay = 1000
+	const delay = 100
 	ctx.set("x-delay", `${delay}ms`)
 	await new Promise((resolve) => setTimeout(resolve, delay))
 	await next()

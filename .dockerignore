@@ -3,4 +3,5 @@ node_modules
 .gitignore
 *.md
 dist
+workers
 /src/json/*.json
