@@ -15,7 +15,7 @@ export type Env = {
 };
 
 export default {
-	async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
 		const res = await fetch(`${env.BASE_URL}/generate-json`, {
 			method: 'POST',
 			headers: {

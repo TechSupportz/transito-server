@@ -1,8 +1,7 @@
 name = "transito-refresh"
-main = "src/worker.ts"
+main = "src/index.ts"
 workers_dev = false
 compatibility_date = "2024-10-05"
-compatibility_flags = ["nodejs_compat"]
 
 [triggers]
 crons = [ "0 19 * * SAT" ]
