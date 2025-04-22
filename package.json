@@ -22,17 +22,17 @@
 	"packageManager": "pnpm@9.1.0",
 	"dependencies": {
 		"@koa/cors": "^5.0.0",
-		"dotenv": "^16.4.5",
+		"dotenv": "^16.5.0",
 		"geolib": "^3.3.4",
-		"koa": "^2.15.3",
+		"koa": "^2.16.1",
 		"koa-bodyparser": "^4.4.1",
 		"koa-json": "^2.0.2",
 		"koa-logger": "^3.2.1",
 		"koa-zod-router": "^2.3.0",
 		"lodash": "^4.17.21",
-		"luxon": "^3.5.0",
-		"minisearch": "^7.1.0",
-		"zod": "^3.23.8"
+		"luxon": "^3.6.1",
+		"minisearch": "^7.1.2",
+		"zod": "^3.24.3"
 	},
 	"devDependencies": {
 		"@types/koa": "^2.15.0",
@@ -40,12 +40,12 @@
 		"@types/koa-json": "^2.0.23",
 		"@types/koa-logger": "^3.1.5",
 		"@types/koa__cors": "^5.0.0",
-		"@types/lodash": "^4.17.7",
-		"@types/luxon": "^3.4.2",
-		"@types/node": "^22.5.4",
-		"nodemon": "^3.1.4",
+		"@types/lodash": "^4.17.16",
+		"@types/luxon": "^3.6.2",
+		"@types/node": "^22.14.1",
+		"nodemon": "^3.1.9",
 		"ts-node": "^10.9.2",
-		"typescript": "^5.6.2",
+		"typescript": "^5.8.3",
 		"wrangler": "^4.12.0"
 	}
 }
