@@ -26,7 +26,6 @@ async function fetchNewOneMapToken() {
 			access_token: res.access_token,
 			expiry_timestamp: res.expiry_timestamp,
 		}
-		console.log("OneMap token fetched successfully")
 	} catch (error) {
 		console.error("Error fetching OneMap token:", error)
 		oneMapToken = null
@@ -35,9 +34,13 @@ async function fetchNewOneMapToken() {
 }
 
 export async function getOneMapToken(): Promise<string | null> {
-	if (!oneMapToken || oneMapToken.expiry_timestamp <= DateTime.now().toMillis()) {
-		await fetchNewOneMapToken()
+	if (
+		oneMapToken &&
+		oneMapToken.expiry_timestamp > DateTime.now().minus({ hours: 12 }).toSeconds()
+	) {
+		return oneMapToken.access_token
 	}
 
+	await fetchNewOneMapToken()
 	return oneMapToken ? oneMapToken.access_token : null
 }
