@@ -1,7 +1,7 @@
 import "dotenv/config"
 import {
 	BusServiceSchema,
-	LTABusService,
+	TLTABusService,
 	LTABusServiceResponseSchema,
 	LTABusServiceSchema,
 } from "../types/bus-service-type"
@@ -11,7 +11,7 @@ import { z } from "zod"
 
 const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 
-async function getBusServices(skip: number = 0): Promise<LTABusService[]> {
+async function getBusServices(skip: number = 0): Promise<TLTABusService[]> {
 	try {
 		const res = await zodFetch(
 			`${busServiceApiUrl}?$skip=${skip}`,

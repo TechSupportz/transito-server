@@ -35,7 +35,7 @@ export const BusServiceJSONSchema = z.object({
 	data: z.array(BusServiceSchema),
 })
 
-export type LTABusService = z.infer<typeof LTABusServiceSchema>
-export type LTABusServiceResponse = z.infer<typeof LTABusServiceResponseSchema>
-export type BusService = z.infer<typeof BusServiceSchema>
-export type BusServiceJSON = z.infer<typeof BusServiceJSONSchema>
+export type TLTABusService = z.infer<typeof LTABusServiceSchema>
+export type TLTABusServiceResponse = z.infer<typeof LTABusServiceResponseSchema>
+export type TBusService = z.infer<typeof BusServiceSchema>
+export type TBusServiceJSON = z.infer<typeof BusServiceJSONSchema>

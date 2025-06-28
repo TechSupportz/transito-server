@@ -1,12 +1,12 @@
-export interface ZodRouterErrorPayload {
+export interface IZodRouterErrorPayload {
 	code: string
 	message: string
 }
 
-export interface ZodRouterError {
-	body?: ZodRouterErrorPayload[]
-	headers?: ZodRouterErrorPayload[]
-	params?: ZodRouterErrorPayload[]
-	query?: ZodRouterErrorPayload[]
-	files?: ZodRouterErrorPayload[]
+export interface IZodRouterError {
+	body?: IZodRouterErrorPayload[]
+	headers?: IZodRouterErrorPayload[]
+	params?: IZodRouterErrorPayload[]
+	query?: IZodRouterErrorPayload[]
+	files?: IZodRouterErrorPayload[]
 }

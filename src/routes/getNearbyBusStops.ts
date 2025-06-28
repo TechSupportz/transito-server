@@ -2,7 +2,7 @@ import getDistance from "geolib/es/getDistance"
 import { createRouteSpec } from "koa-zod-router"
 import { z } from "zod"
 import { busStops } from "../json"
-import { NearbyBusStop, NearbyBusStopSchema } from "../types/bus-stop-type"
+import { TNearbyBusStop, NearbyBusStopSchema } from "../types/bus-stop-type"
 
 export const getNearbyBusStops = createRouteSpec({
 	method: "get",
@@ -17,7 +17,7 @@ export const getNearbyBusStops = createRouteSpec({
 	handler: async (ctx) => {
 		const { latitude, longitude, range } = ctx.request.query
 
-		const nearbyBusStops: NearbyBusStop[] = []
+		const nearbyBusStops: TNearbyBusStop[] = []
 		const userLocation = { latitude, longitude }
 
 		for (const busStop of busStops) {

@@ -1,6 +1,6 @@
 import { busServices } from "../json"
-import { BusService } from "../types/bus-service-type"
+import { TBusService } from "../types/bus-service-type"
 
-export function getBusServiceFromServiceNo(serviceNo: string): BusService | undefined {
+export function getBusServiceFromServiceNo(serviceNo: string): TBusService | undefined {
 	return busServices.find((busService) => busService.serviceNo === serviceNo)
 }

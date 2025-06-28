@@ -5,18 +5,18 @@ import { z } from "zod"
 import { generateBusRoutesJSON } from "../fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "../fetchers/bus-services-fetcher"
 import { generateBusStopsJSON } from "../fetchers/bus-stops-fetcher"
-import { BusRouteStop, BusRouteStopSchema, LTABusRoute } from "../types/bus-route-type"
+import { TBusRouteStop, BusRouteStopSchema, TLTABusRoute } from "../types/bus-route-type"
 import {
-	BusService,
-	BusServiceJSON,
+	TBusService,
+	TBusServiceJSON,
 	BusServiceJSONSchema,
-	LTABusService,
+	TLTABusService,
 } from "../types/bus-service-type"
 import {
-	BusStopJSON,
+	TBusStopJSON,
 	BusStopJSONSchema,
-	LTABusStop,
-	TaggedBusStop
+	TLTABusStop,
+	TTaggedBusStop,
 } from "../types/bus-stop-type"
 import { generateSearchTags, getBusStopFromCode } from "../utils/bus-stops"
 import { writeJSON } from "../utils/write-json"
@@ -78,10 +78,10 @@ export const generateJSON = createRouteSpec({
 })
 
 async function transformBusStops(
-	busStops: LTABusStop[],
-	busRoutes: LTABusRoute[],
-): Promise<BusStopJSON> {
-	const tempBusStops: TaggedBusStop[] = []
+	busStops: TLTABusStop[],
+	busRoutes: TLTABusRoute[],
+): Promise<TBusStopJSON> {
+	const tempBusStops: TTaggedBusStop[] = []
 
 	for (const v of busStops) {
 		const services = busRoutes.flatMap((route) => {
@@ -93,7 +93,7 @@ async function transformBusStops(
 		})
 		const searchTags = generateSearchTags(v.Description)
 
-		const busStop: TaggedBusStop = {
+		const busStop: TTaggedBusStop = {
 			code: v.BusStopCode,
 			name: v.Description,
 			roadName: v.RoadName,
@@ -120,11 +120,11 @@ async function transformBusStops(
 }
 
 async function transformBusServices(
-	busRoutes: LTABusRoute[],
-	busServices: LTABusService[],
-	busStopData: TaggedBusStop[],
-): Promise<BusServiceJSON> {
-	const tempBusServices: BusService[] = []
+	busRoutes: TLTABusRoute[],
+	busServices: TLTABusService[],
+	busStopData: TTaggedBusStop[],
+): Promise<TBusServiceJSON> {
+	const tempBusServices: TBusService[] = []
 
 	for (const [i, v] of busServices.entries()) {
 		if (i !== 0 && busServices[i - 1].ServiceNo === v.ServiceNo) {
@@ -156,7 +156,7 @@ async function transformBusServices(
 						saturday: route.SAT_LastBus.split("").toSpliced(2, 0, ":").join(""),
 						sunday: route.SUN_LastBus.split("").toSpliced(2, 0, ":").join(""),
 					},
-				} satisfies BusRouteStop
+				} satisfies TBusRouteStop
 			} else {
 				return []
 			}
@@ -174,7 +174,7 @@ async function transformBusServices(
 		const originBusStopInfo = getBusStopFromCode(v.OriginCode, busStopData)
 		const destinationBusStopInfo = getBusStopFromCode(v.DestinationCode, busStopData)
 
-		const busService: BusService = {
+		const busService: TBusService = {
 			serviceNo: v.ServiceNo,
 			interchanges: [
 				{

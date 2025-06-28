@@ -1,10 +1,10 @@
 import { busStops } from "../json"
-import { abbrMappings, BusStop, BusStopJSON } from "../types/bus-stop-type"
+import { abbrMappings, TBusStop, TBusStopJSON } from "../types/bus-stop-type"
 
 export function getBusStopFromCode(
 	busStopCode: string,
-	busStopData?: BusStopJSON["data"],
-): BusStop | undefined {
+	busStopData?: TBusStopJSON["data"],
+): TBusStop | undefined {
 	const taggedBusStop = busStopData
 		? busStopData.find((busStop) => busStop.code === busStopCode)
 		: busStops.find((busStop) => busStop.code === busStopCode)

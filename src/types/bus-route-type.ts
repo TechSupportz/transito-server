@@ -36,6 +36,6 @@ export const BusRouteStopSchema = z.object({
 	lastBus: BusScheduleSchema,
 })
 
-export type LTABusRoute = z.infer<typeof LTABusRouteSchema>
-export type LTABusRouteResponse = z.infer<typeof LTABusRouteResponseSchema>
-export type BusRouteStop = z.infer<typeof BusRouteStopSchema>
+export type TLTABusRoute = z.infer<typeof LTABusRouteSchema>
+export type TLTABusRouteResponse = z.infer<typeof LTABusRouteResponseSchema>
+export type TBusRouteStop = z.infer<typeof BusRouteStopSchema>

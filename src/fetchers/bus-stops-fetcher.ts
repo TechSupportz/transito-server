@@ -1,11 +1,11 @@
 import { z } from "zod"
-import { LTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "../types/bus-stop-type"
+import { TLTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "../types/bus-stop-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
 import { zodFetch } from "../utils/zod-fetch"
 
 const busStopApiUrl = `${ltaBaseUrl}/BusStops`
 
-async function getBusStops(skip: number = 0): Promise<LTABusStop[]> {
+async function getBusStops(skip: number = 0): Promise<TLTABusStop[]> {
 	try {
 		const res = await zodFetch(
 			`${busStopApiUrl}?$skip=${skip}`,
@@ -47,4 +47,3 @@ async function generateBusStopsJSON() {
 }
 
 export { generateBusStopsJSON }
-

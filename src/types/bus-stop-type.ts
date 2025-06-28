@@ -229,10 +229,10 @@ export const abbrMappings: Record<any, string> = {
 	wtr: "water",
 }
 
-export type LTABusStop = z.infer<typeof LTABusStopSchema>
-export type LTABusStopResponse = z.infer<typeof LTABusStopResponseSchema>
-export type BusStop = z.infer<typeof BusStopSchema>
-export type BusStopJSON = z.infer<typeof BusStopJSONSchema>
-export type NearbyBusStop = z.infer<typeof NearbyBusStopSchema>
-export type BasicBusStop = z.infer<typeof BasicBusStopSchema>
-export type TaggedBusStop = z.infer<typeof TaggedBusStopSchema>
+export type TLTABusStop = z.infer<typeof LTABusStopSchema>
+export type TLTABusStopResponse = z.infer<typeof LTABusStopResponseSchema>
+export type TBusStop = z.infer<typeof BusStopSchema>
+export type TBusStopJSON = z.infer<typeof BusStopJSONSchema>
+export type TNearbyBusStop = z.infer<typeof NearbyBusStopSchema>
+export type TBasicBusStop = z.infer<typeof BasicBusStopSchema>
+export type TTaggedBusStop = z.infer<typeof TaggedBusStopSchema>
