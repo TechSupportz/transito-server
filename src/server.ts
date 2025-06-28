@@ -15,6 +15,7 @@ import {
 } from "./routes"
 import { getBusStopServices } from "./routes/getBusStopServices"
 import { searchBusServices } from "./routes/searchBusServices"
+import { searchOneMap } from "./routes/one-map/searchOneMap"
 
 const app = new Koa()
 const router = zodRouter({
@@ -64,6 +65,9 @@ router.register(getBusStopServices)
 // Bus Service Routes
 router.register(getBusService)
 router.register(searchBusServices)
+
+// OneMap Routes
+router.register(searchOneMap)
 
 app.use(router.routes())
 
