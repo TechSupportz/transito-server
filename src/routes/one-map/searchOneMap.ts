@@ -1,6 +1,12 @@
 import { createRouteSpec } from "koa-zod-router"
 import z from "zod"
 import { getOneMapHeaders, oneMapBaseUrl } from "../../utils/one-map-api"
+import { zodFetch } from "../../utils/zod-fetch"
+import {
+	OneMapAPISearchResponseSchema,
+	TSearchOneMap,
+	TSearchOneMapData,
+} from "../../types/one-map-type"
 
 export const searchOneMap = createRouteSpec({
 	method: "get",
@@ -8,7 +14,7 @@ export const searchOneMap = createRouteSpec({
 	validate: {
 		query: z.object({
 			query: z.string().min(1, { message: "Query must be at least 1 character long" }),
-			page: z.coerce.number().int().min(1).default(1).optional(),
+			page: z.coerce.number().int().default(1),
 		}),
 	},
 	handler: async (ctx) => {
@@ -23,22 +29,33 @@ export const searchOneMap = createRouteSpec({
 		}).toString()
 
 		try {
-			const res = await fetch(
+			const res = await zodFetch(
 				`${oneMapBaseUrl}/api/common/elastic/search?${oneMapSearchQueryParams}`,
 				{
 					method: "GET",
 					headers: oneMapHeaders,
 				},
+				OneMapAPISearchResponseSchema,
 			)
 
-			if (!res.ok) {
-				throw new Error(`OneMap API error: ${res.status} ${res.statusText}`)
+			const formattedResults: TSearchOneMapData[] = res.results.map((result) => ({
+				name: result.SEARCHVAL,
+				address: result.ADDRESS,
+				postalCode: result.POSTAL === "NIL" ? null : result.POSTAL,
+				latitude: result.LATITUDE,
+				longitude: result.LONGITUDE,
+			}))
+
+			const response: TSearchOneMap = {
+				totalCount: res.found,
+				count: formattedResults.length,
+				totalPages: res.totalNumPages,
+				page: res.pageNum,
+				data: formattedResults,
 			}
 
-			const data = await res.json()
-
 			ctx.status = 200
-			ctx.body = data // TODO - reparse data format and add typings
+			ctx.body = response
 			return
 		} catch (error) {
 			ctx.status = 500
