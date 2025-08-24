@@ -8,3 +8,6 @@ crons = [ "0 19 * * SAT" ]
 
 [vars]
 BASE_URL = "https://transito-api.tnitish.com"
+
+[observability.logs]
+enabled = true
