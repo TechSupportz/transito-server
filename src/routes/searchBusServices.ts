@@ -1,15 +1,15 @@
-import { createRouteSpec } from "koa-zod-router"
+import { defineRoute } from "@utils/route-builder"
 import MiniSearch from "minisearch"
 import { z } from "zod"
 import { busServices } from "../json"
 
-export const searchBusServices = createRouteSpec({
+export const searchBusServices = defineRoute({
 	method: "get",
 	path: "/search/bus-services",
 	validate: {
 		query: z.object({
 			query: z
-				.string({ required_error: "Search query is required" })
+				.string({ error: (issues) => issues.message || "Search query is required" })
 				.min(1, { message: "Search query must be at least 1 character long" }),
 		}),
 	},
@@ -19,7 +19,13 @@ export const searchBusServices = createRouteSpec({
 		const ms = new MiniSearch({
 			fields: ["serviceNo"],
 			idField: "serviceNo",
-			storeFields: ["serviceNo", "operator", "isLoopService", "isSingleRoute", "interchanges"],
+			storeFields: [
+				"serviceNo",
+				"operator",
+				"isLoopService",
+				"isSingleRoute",
+				"interchanges",
+			],
 			searchOptions: {
 				prefix: true,
 			},

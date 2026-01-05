@@ -1,14 +1,14 @@
-import { createRouteSpec } from "koa-zod-router"
+import { getOneMapHeaders, oneMapBaseUrl } from "@utils/one-map-api"
+import { defineRoute } from "@utils/route-builder"
+import { zodFetch } from "@utils/zod-fetch"
 import z from "zod"
-import { getOneMapHeaders, oneMapBaseUrl } from "../../utils/one-map-api"
-import { zodFetch } from "../../utils/zod-fetch"
 import {
 	OneMapAPISearchResponseSchema,
 	TSearchOneMap,
 	TSearchOneMapData,
 } from "../../types/one-map-type"
 
-export const searchOneMap = createRouteSpec({
+export const searchOneMap = defineRoute({
 	method: "get",
 	path: "/onemap/search",
 	validate: {

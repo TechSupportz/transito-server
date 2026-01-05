@@ -1,13 +1,12 @@
+import { ltaAPIHeaders, ltaBaseUrl } from "@utils/lta-api"
+import { zodFetch } from "@utils/zod-fetch"
 import "dotenv/config"
+import { z } from "zod"
 import {
-	BusServiceSchema,
-	TLTABusService,
 	LTABusServiceResponseSchema,
 	LTABusServiceSchema,
+	TLTABusService
 } from "../types/bus-service-type"
-import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { zodFetch } from "../utils/zod-fetch"
-import { z } from "zod"
 
 const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 

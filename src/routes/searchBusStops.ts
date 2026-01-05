@@ -1,16 +1,16 @@
-import { createRouteSpec } from "koa-zod-router"
+import { isBusStopCode } from "@utils/bus-stops"
+import { defineRoute } from "@utils/route-builder"
 import MiniSearch from "minisearch"
 import { z } from "zod"
 import { busStops } from "../json"
 import { BasicBusStopSchema } from "../types/bus-stop-type"
-import { isBusStopCode } from "../utils/bus-stops"
 
-export const searchBusStops = createRouteSpec({
+export const searchBusStops = defineRoute({
 	method: "get",
 	path: "/search/bus-stops",
 	validate: {
 		query: z.object({
-			query: z.string({ required_error: "Search query is required" }),
+			query: z.string({ error: (issues) => issues.message || "Search query is required" }),
 		}),
 	},
 	handler: async (ctx) => {

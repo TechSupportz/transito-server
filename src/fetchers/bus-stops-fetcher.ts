@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { TLTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "../types/bus-stop-type"
-import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { zodFetch } from "../utils/zod-fetch"
+import { ltaAPIHeaders, ltaBaseUrl } from "@utils/lta-api"
+import { zodFetch } from "@utils/zod-fetch"
 
 const busStopApiUrl = `${ltaBaseUrl}/BusStops`
 

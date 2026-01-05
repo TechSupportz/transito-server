@@ -1,27 +1,27 @@
-import { createRouteSpec } from "koa-zod-router"
+import { generateSearchTags, getBusStopFromCode } from "@utils/bus-stops"
+import { defineRoute } from "@utils/route-builder"
+import { writeJSON } from "@utils/write-json"
 import { groupBy } from "lodash"
 import { DateTime } from "luxon"
 import { z } from "zod"
 import { generateBusRoutesJSON } from "../fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "../fetchers/bus-services-fetcher"
 import { generateBusStopsJSON } from "../fetchers/bus-stops-fetcher"
-import { TBusRouteStop, BusRouteStopSchema, TLTABusRoute } from "../types/bus-route-type"
+import { BusRouteStopSchema, TBusRouteStop, TLTABusRoute } from "../types/bus-route-type"
 import {
+	BusServiceJSONSchema,
 	TBusService,
 	TBusServiceJSON,
-	BusServiceJSONSchema,
 	TLTABusService,
 } from "../types/bus-service-type"
 import {
-	TBusStopJSON,
 	BusStopJSONSchema,
+	TBusStopJSON,
 	TLTABusStop,
 	TTaggedBusStop,
 } from "../types/bus-stop-type"
-import { generateSearchTags, getBusStopFromCode } from "../utils/bus-stops"
-import { writeJSON } from "../utils/write-json"
 
-export const generateJSON = createRouteSpec({
+export const generateJSON = defineRoute({
 	method: "post",
 	path: "/generate-json",
 	validate: {

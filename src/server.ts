@@ -3,7 +3,6 @@ import Koa from "koa"
 import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import KoaLogger from "koa-logger"
-import { zodRouter } from "koa-zod-router"
 import { Settings } from "luxon"
 import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
 import {
@@ -16,14 +15,11 @@ import {
 import { getBusStopServices } from "./routes/getBusStopServices"
 import { searchBusServices } from "./routes/searchBusServices"
 import { searchOneMap } from "./routes/one-map/searchOneMap"
+import Router from "@koa/router"
+import { buildRoute } from "@utils/route-builder"
 
 const app = new Koa()
-const router = zodRouter({
-	zodRouter: {
-		exposeRequestErrors: true,
-		exposeResponseErrors: process.env.ENV === "dev" ? true : false,
-	},
-})
+const router = new Router()
 
 // Default timezone set to Singapore for Luxon
 Settings.defaultLocale = "en_SG"
@@ -54,20 +50,20 @@ router.get("/", async (ctx) => {
 })
 
 // JSON Routes
-router.register(generateJSON)
+buildRoute(router, generateJSON)
 
 // Bus Stop Routes
-router.register(getBusStop)
-router.register(searchBusStops)
-router.register(getNearbyBusStops)
-router.register(getBusStopServices)
+buildRoute(router, getBusStop)
+buildRoute(router, searchBusStops)
+buildRoute(router, getNearbyBusStops)
+buildRoute(router, getBusStopServices)
 
 // Bus Service Routes
-router.register(getBusService)
-router.register(searchBusServices)
+buildRoute(router, getBusService)
+buildRoute(router, searchBusServices)
 
 // OneMap Routes
-router.register(searchOneMap)
+buildRoute(router, searchOneMap)
 
 app.use(router.routes())
 

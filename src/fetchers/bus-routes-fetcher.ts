@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { TLTABusRoute, LTABusRouteResponseSchema, LTABusRouteSchema } from "../types/bus-route-type"
-import { ltaAPIHeaders, ltaBaseUrl } from "../utils/lta-api"
-import { zodFetch } from "../utils/zod-fetch"
+import { ltaAPIHeaders, ltaBaseUrl } from "@utils/lta-api"
+import { zodFetch } from "@utils/zod-fetch"
 
 const busRouteApiUrl = `${ltaBaseUrl}/BusRoutes`
 

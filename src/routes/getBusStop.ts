@@ -1,8 +1,8 @@
-import { createRouteSpec } from "koa-zod-router"
 import { z } from "zod"
-import { getBusStopFromCode } from "../utils/bus-stops"
+import { getBusStopFromCode } from "@utils/bus-stops"
+import { defineRoute } from "@utils/route-builder"
 
-export const getBusStop = createRouteSpec({
+export const getBusStop = defineRoute({
 	method: "get",
 	path: "/bus-stop/:code",
 	validate: {

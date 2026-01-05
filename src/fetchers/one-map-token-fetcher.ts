@@ -1,7 +1,7 @@
 import { DateTime } from "luxon"
 import { OneMapTokenResponseSchema, TOneMapTokenResponse } from "../types/one-map-type"
-import { oneMapBaseUrl } from "../utils/one-map-api"
-import { zodFetch } from "../utils/zod-fetch"
+import { oneMapBaseUrl } from "@utils/one-map-api"
+import { zodFetch } from "@utils/zod-fetch"
 
 let oneMapToken: TOneMapTokenResponse | null = null
 
