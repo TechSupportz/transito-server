@@ -1,4 +1,4 @@
-import { getOneMapToken } from "../fetchers/one-map-token-fetcher"
+import { getOneMapToken } from "@fetchers/one-map-token-fetcher"
 
 export const oneMapBaseUrl = "https://www.onemap.gov.sg"
 

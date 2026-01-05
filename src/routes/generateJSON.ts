@@ -4,22 +4,22 @@ import { writeJSON } from "@utils/write-json"
 import { groupBy } from "lodash"
 import { DateTime } from "luxon"
 import { z } from "zod"
-import { generateBusRoutesJSON } from "../fetchers/bus-routes-fetcher"
-import { generateBusServicesJSON } from "../fetchers/bus-services-fetcher"
-import { generateBusStopsJSON } from "../fetchers/bus-stops-fetcher"
-import { BusRouteStopSchema, TBusRouteStop, TLTABusRoute } from "../types/bus-route-type"
+import { generateBusRoutesJSON } from "@fetchers/bus-routes-fetcher"
+import { generateBusServicesJSON } from "@fetchers/bus-services-fetcher"
+import { generateBusStopsJSON } from "@fetchers/bus-stops-fetcher"
+import { BusRouteStopSchema, TBusRouteStop, TLTABusRoute } from "@app-types/bus-route-type"
 import {
 	BusServiceJSONSchema,
 	TBusService,
 	TBusServiceJSON,
 	TLTABusService,
-} from "../types/bus-service-type"
+} from "@app-types/bus-service-type"
 import {
 	BusStopJSONSchema,
 	TBusStopJSON,
 	TLTABusStop,
 	TTaggedBusStop,
-} from "../types/bus-stop-type"
+} from "@app-types/bus-stop-type"
 
 export const generateJSON = defineRoute({
 	method: "post",

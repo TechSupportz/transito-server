@@ -1,6 +1,5 @@
-export * from "./generateJSON"
-export * from "./getBusService"
-export * from "./getBusStop"
-export * from "./getNearbyBusStops"
-export * from "./searchBusStops"
-
+export * from "@routes/generateJSON"
+export * from "@routes/getBusService"
+export * from "@routes/getBusStop"
+export * from "@routes/getNearbyBusStops"
+export * from "@routes/searchBusStops"

@@ -1,5 +1,5 @@
-import { busStops } from "../json"
-import { abbrMappings, TBusStop, TBusStopJSON } from "../types/bus-stop-type"
+import { busStops } from "@json"
+import { abbrMappings, TBusStop, TBusStopJSON } from "@app-types/bus-stop-type"
 
 export function getBusStopFromCode(
 	busStopCode: string,

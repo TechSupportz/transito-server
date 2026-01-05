@@ -1,5 +1,5 @@
 import { DateTime } from "luxon"
-import { OneMapTokenResponseSchema, TOneMapTokenResponse } from "../types/one-map-type"
+import { OneMapTokenResponseSchema, TOneMapTokenResponse } from "@app-types/one-map-type"
 import { oneMapBaseUrl } from "@utils/one-map-api"
 import { zodFetch } from "@utils/zod-fetch"
 

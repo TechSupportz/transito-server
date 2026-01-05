@@ -6,7 +6,7 @@ import {
 	OneMapAPISearchResponseSchema,
 	TSearchOneMap,
 	TSearchOneMapData,
-} from "../../types/one-map-type"
+} from "@app-types/one-map-type"
 
 export const searchOneMap = defineRoute({
 	method: "get",

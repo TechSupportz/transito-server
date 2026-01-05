@@ -2,8 +2,8 @@ import { isBusStopCode } from "@utils/bus-stops"
 import { defineRoute } from "@utils/route-builder"
 import MiniSearch from "minisearch"
 import { z } from "zod"
-import { busStops } from "../json"
-import { BasicBusStopSchema } from "../types/bus-stop-type"
+import { busStops } from "@json"
+import { BasicBusStopSchema } from "@app-types/bus-stop-type"
 
 export const searchBusStops = defineRoute({
 	method: "get",

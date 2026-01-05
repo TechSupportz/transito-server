@@ -5,8 +5,8 @@ import { z } from "zod"
 import {
 	LTABusServiceResponseSchema,
 	LTABusServiceSchema,
-	TLTABusService
-} from "../types/bus-service-type"
+	TLTABusService,
+} from "@app-types/bus-service-type"
 
 const busServiceApiUrl = `${ltaBaseUrl}/BusServices`
 

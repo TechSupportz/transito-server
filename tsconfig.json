@@ -5,7 +5,9 @@
 		"baseUrl": "./",
 		"paths": {
 			"@fetchers/*": ["src/fetchers/*"],
+			"@json": ["src/json/index"],
 			"@json/*": ["src/json/*"],
+			"@routes": ["src/routes/index"],
 			"@routes/*": ["src/routes/*"],
 			"@app-types/*": ["src/types/*"],
 			"@utils/*": ["src/utils/*"]

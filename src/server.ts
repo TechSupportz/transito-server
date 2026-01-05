@@ -4,17 +4,11 @@ import bodyParser from "koa-bodyparser"
 import json from "koa-json"
 import KoaLogger from "koa-logger"
 import { Settings } from "luxon"
-import { busServiceUpdatedAt, busStopUpdatedAt } from "./json"
-import {
-	generateJSON,
-	getBusService,
-	getBusStop,
-	getNearbyBusStops,
-	searchBusStops,
-} from "./routes"
-import { getBusStopServices } from "./routes/getBusStopServices"
-import { searchBusServices } from "./routes/searchBusServices"
-import { searchOneMap } from "./routes/one-map/searchOneMap"
+import { busServiceUpdatedAt, busStopUpdatedAt } from "@json"
+import { generateJSON, getBusService, getBusStop, getNearbyBusStops, searchBusStops } from "@routes"
+import { getBusStopServices } from "@routes/getBusStopServices"
+import { searchBusServices } from "@routes/searchBusServices"
+import { searchOneMap } from "@routes/one-map/searchOneMap"
 import Router from "@koa/router"
 import { buildRoute } from "@utils/route-builder"
 

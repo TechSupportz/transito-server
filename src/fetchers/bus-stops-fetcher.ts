@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { TLTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "../types/bus-stop-type"
+import { TLTABusStop, LTABusStopResponseSchema, LTABusStopSchema } from "@app-types/bus-stop-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "@utils/lta-api"
 import { zodFetch } from "@utils/zod-fetch"
 

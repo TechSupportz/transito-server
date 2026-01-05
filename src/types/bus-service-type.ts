@@ -1,6 +1,6 @@
 import z from "zod"
-import { BusRouteStopSchema } from "./bus-route-type"
-import { BasicBusStopSchema } from "./bus-stop-type"
+import { BusRouteStopSchema } from "@app-types/bus-route-type"
+import { BasicBusStopSchema } from "@app-types/bus-stop-type"
 
 export const LTABusServiceSchema = z.object({
 	ServiceNo: z.string(),

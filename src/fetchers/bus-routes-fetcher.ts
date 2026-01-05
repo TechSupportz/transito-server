@@ -1,5 +1,9 @@
 import { z } from "zod"
-import { TLTABusRoute, LTABusRouteResponseSchema, LTABusRouteSchema } from "../types/bus-route-type"
+import {
+	TLTABusRoute,
+	LTABusRouteResponseSchema,
+	LTABusRouteSchema,
+} from "@app-types/bus-route-type"
 import { ltaAPIHeaders, ltaBaseUrl } from "@utils/lta-api"
 import { zodFetch } from "@utils/zod-fetch"
 

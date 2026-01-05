@@ -1,8 +1,8 @@
 import { DateTime } from "luxon"
 import busServiceJSON from "./bus-services.json"
 import busStopJSON from "./bus-stops.json"
-import { TBusServiceJSON } from "../types/bus-service-type"
-import { TBusStopJSON } from "../types/bus-stop-type"
+import { TBusServiceJSON } from "@app-types/bus-service-type"
+import { TBusStopJSON } from "@app-types/bus-stop-type"
 
 export const busStops = (busStopJSON as TBusStopJSON).data
 export const busServices = (busServiceJSON as TBusServiceJSON).data

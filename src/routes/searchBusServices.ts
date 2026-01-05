@@ -1,7 +1,7 @@
 import { defineRoute } from "@utils/route-builder"
 import MiniSearch from "minisearch"
 import { z } from "zod"
-import { busServices } from "../json"
+import { busServices } from "@json"
 
 export const searchBusServices = defineRoute({
 	method: "get",
