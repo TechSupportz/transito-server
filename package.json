@@ -19,6 +19,13 @@
 			"**/json/**"
 		]
 	},
+	"_moduleAliases": {
+		"@fetchers": "dist/fetchers",
+		"@json": "dist/json",
+		"@routes": "dist/routes",
+		"@app-types": "dist/types",
+		"@utils": "dist/utils"
+	},
 	"packageManager": "pnpm@10.27.0",
 	"dependencies": {
 		"@koa/cors": "^5.0.0",
@@ -32,6 +39,7 @@
 		"lodash": "^4.17.21",
 		"luxon": "^3.7.2",
 		"minisearch": "^7.2.0",
+		"module-alias": "^2.2.3",
 		"zod": "^4.3.4"
 	},
 	"devDependencies": {
