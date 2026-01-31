@@ -18,7 +18,14 @@ ONEMAP_PASSWORD=$(curl -s "http://metadata.google.internal/computeMetadata/v1/in
 
 CF_TOKEN=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/CF_TOKEN" -H "Metadata-Flavor: Google")
 
-# 5. RUN THE SERVER
+# 5. START CF TUNNEL
+docker run -d \
+  --name cloudflared-tunnel \
+  --restart always \
+  --network host \
+  cloudflare/cloudflared:latest tunnel --no-autoupdate run --token "$CF_TOKEN" 
+
+# 6. START transito-server
 docker run -d \
   --name transito-server \
   --restart always \
@@ -30,5 +37,24 @@ docker run -d \
   -e PORT=80 \
   $IMAGE_URL
 
-# 6. START CF TUNNEL
-docker run -d --network host cloudflare/cloudflared:latest tunnel --no-autoupdate run --token "$CF_TOKEN" 
+# 7. Run /generate-json function once transito-server is up
+echo "Waiting for transito-server to be ready..."
+MAX_ATTEMPTS=30
+ATTEMPT=1
+while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+  RESPONSE=$(curl -s http://localhost:80/ 2>/dev/null)
+  if echo "$RESPONSE" | grep -q "Transito's server is running as expected"; then
+    echo "Service is ready!"
+    break
+  fi
+  echo "Attempt $ATTEMPT/$MAX_ATTEMPTS - Service not ready yet, waiting..."
+  sleep 2
+  ATTEMPT=$((ATTEMPT + 1))
+done
+
+if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+  echo "ERROR: Service failed to start after ${MAX_ATTEMPTS} attempts"
+  exit 1
+fi
+
+curl -X POST http://localhost:80/generate-json --header "secret: $JSON_SECRET"
