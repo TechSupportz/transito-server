@@ -2,15 +2,14 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "CommonJS",
-		"baseUrl": "./",
 		"paths": {
-			"@fetchers/*": ["src/fetchers/*"],
-			"@json": ["src/json/index"],
-			"@json/*": ["src/json/*"],
-			"@routes": ["src/routes/index"],
-			"@routes/*": ["src/routes/*"],
-			"@app-types/*": ["src/types/*"],
-			"@utils/*": ["src/utils/*"]
+			"@fetchers/*": ["./src/fetchers/*"],
+			"@json": ["./src/json/index"],
+			"@json/*": ["./src/json/*"],
+			"@routes": ["./src/routes/index"],
+			"@routes/*": ["./src/routes/*"],
+			"@app-types/*": ["./src/types/*"],
+			"@utils/*": ["./src/utils/*"]
 		},
 		"types": ["node"],
 		"resolveJsonModule": true,
