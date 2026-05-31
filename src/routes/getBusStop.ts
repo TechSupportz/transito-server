@@ -7,7 +7,7 @@ export const getBusStop = defineRoute({
 	path: "/bus-stop/:code",
 	validate: {
 		params: z.object({
-			code: z.string().length(5, { message: "Bus stop code must be 5 characters long" }),
+			code: z.string().min(1, { message: "Bus stop code is required" }),
 		}),
 	},
 	handler: async (ctx) => {

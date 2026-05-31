@@ -19,7 +19,7 @@ export const searchBusStops = defineRoute({
 		const ms = new MiniSearch({
 			fields: ["name", "roadName", "code", "searchTags"],
 			idField: "code",
-			storeFields: ["name", "roadName", "code", "latitude", "longitude"],
+			storeFields: ["name", "roadName", "code", "latitude", "longitude", "sources"],
 			searchOptions: {
 				fuzzy: (term) =>
 					term.toLowerCase().includes("blk") || isBusStopCode(term) ? false : 0.2,

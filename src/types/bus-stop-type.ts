@@ -13,13 +13,24 @@ export const LTABusStopResponseSchema = z.object({
 	value: z.array(LTABusStopSchema),
 })
 
+export const BusStopProviderSourcesSchema = z
+	.object({
+		LTA: z.string().optional(),
+		NUS: z.string().optional(),
+	})
+	.strict()
+	.refine((sources) => sources.LTA || sources.NUS, {
+		message: "Bus stop must have at least one provider source",
+	})
+
 export const TaggedBusStopSchema = z.object({
-	code: z.string().length(5),
+	code: z.string().min(1),
 	name: z.string(),
 	roadName: z.string(),
 	latitude: z.number().min(-90).max(90),
 	longitude: z.number().min(-180).max(180),
 	services: z.array(z.string()),
+	sources: BusStopProviderSourcesSchema,
 	searchTags: z.array(z.string()),
 })
 
@@ -231,6 +242,7 @@ export const abbrMappings: Record<any, string> = {
 
 export type TLTABusStop = z.infer<typeof LTABusStopSchema>
 export type TLTABusStopResponse = z.infer<typeof LTABusStopResponseSchema>
+export type TBusStopProviderSources = z.infer<typeof BusStopProviderSourcesSchema>
 export type TBusStop = z.infer<typeof BusStopSchema>
 export type TBusStopJSON = z.infer<typeof BusStopJSONSchema>
 export type TNearbyBusStop = z.infer<typeof NearbyBusStopSchema>

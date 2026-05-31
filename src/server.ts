@@ -6,7 +6,14 @@ import json from "koa-json"
 import KoaLogger from "koa-logger"
 import { Settings } from "luxon"
 import { busServiceUpdatedAt, busStopUpdatedAt } from "@json"
-import { generateJSON, getBusService, getBusStop, getNearbyBusStops, searchBusStops } from "@routes"
+import {
+	generateJSON,
+	getBusService,
+	getBusStop,
+	getNearbyBusStops,
+	getNUSBusArrivals,
+	searchBusStops,
+} from "@routes"
 import { getBusStopServices } from "@routes/getBusStopServices"
 import { searchBusServices } from "@routes/searchBusServices"
 import { searchOneMap } from "@routes/one-map/searchOneMap"
@@ -59,6 +66,9 @@ buildRoute(router, searchBusServices)
 
 // OneMap Routes
 buildRoute(router, searchOneMap)
+
+// NUS Routes
+buildRoute(router, getNUSBusArrivals)
 
 app.use(router.routes())
 

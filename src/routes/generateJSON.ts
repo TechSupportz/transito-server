@@ -1,12 +1,15 @@
 import { generateSearchTags, getBusStopFromCode } from "@utils/bus-stops"
 import { defineRoute } from "@utils/route-builder"
 import { writeJSON } from "@utils/write-json"
+import { appendUniqueValues } from "@utils/array"
 import { groupBy } from "lodash"
 import { DateTime } from "luxon"
 import { z } from "zod"
 import { generateBusRoutesJSON } from "@fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "@fetchers/bus-services-fetcher"
 import { generateBusStopsJSON } from "@fetchers/bus-stops-fetcher"
+import { fetchNUSPickupPoints, fetchNUSRouteMinMaxTimes } from "@fetchers/nus-eta-fetcher"
+import { fetchUnivusBusStops } from "@fetchers/univus-maps-data-fetcher"
 import { BusRouteStopSchema, TBusRouteStop, TLTABusRoute } from "@app-types/bus-route-type"
 import {
 	BusServiceJSONSchema,
@@ -18,8 +21,15 @@ import {
 	BusStopJSONSchema,
 	TBusStopJSON,
 	TLTABusStop,
+	TBasicBusStop,
 	TTaggedBusStop,
 } from "@app-types/bus-stop-type"
+import { TNUSPickupPoint, TNUSRouteMinMaxTime, TUnivusBusStop } from "@app-types/univus-type"
+import {
+	NUS_SERVICE_CODES,
+	NUS_TO_LTA_BUS_STOP_MAPPINGS,
+	normalizeNUSPickupPointCode,
+} from "@utils/nus-mappings"
 
 export const generateJSON = defineRoute({
 	method: "post",
@@ -37,27 +47,41 @@ export const generateJSON = defineRoute({
 		}
 
 		try {
-			const [busStops, busServices, busRoutes] = await Promise.all([
+			const [
+				busStops,
+				busServices,
+				busRoutes,
+				univusBusStops,
+				nusStaticRouteData,
+			] = await Promise.all([
 				generateBusStopsJSON(),
 				generateBusServicesJSON(),
 				generateBusRoutesJSON(),
+				fetchUnivusBusStops(),
+				fetchNUSStaticRouteData(),
 			])
 
-			if (!busStops || !busServices || !busRoutes) {
-				console.log("Something undefined")
-				throw new Error()
+			if (!busStops || !busServices || !busRoutes || !univusBusStops || !nusStaticRouteData) {
+				throw new Error("Failed to fetch raw bus data")
 			}
 
-			const transformedBusStops = await transformBusStops(busStops, busRoutes)
-
-			await writeJSON("bus-stops", transformedBusStops)
+			const ltaServiceNos = new Set(busServices.map((service) => service.ServiceNo))
+			const transformedBusStops = await transformBusStops(
+				busStops,
+				busRoutes,
+				nusStaticRouteData,
+				univusBusStops,
+				ltaServiceNos,
+			)
 
 			const transformedBusServices = await transformBusServices(
 				busRoutes,
 				busServices,
 				transformedBusStops.data,
+				nusStaticRouteData,
 			)
 
+			await writeJSON("bus-stops", transformedBusStops)
 			await writeJSON("bus-services", transformedBusServices)
 
 			ctx.status = 201
@@ -77,9 +101,97 @@ export const generateJSON = defineRoute({
 	},
 })
 
+type TNUSStaticRoute = {
+	serviceNo: string
+	pickupPoints: TNUSPickupPoint[]
+	times: TNUSRouteMinMaxTime[]
+}
+
+type TNUSStaticRouteData = TNUSStaticRoute[]
+
+async function fetchNUSStaticRouteData(): Promise<TNUSStaticRouteData> {
+	return Promise.all(
+		NUS_SERVICE_CODES.map(async (serviceNo) => {
+			const [pickupPoints, times] = await Promise.all([
+				fetchNUSPickupPoints(serviceNo),
+				fetchNUSRouteMinMaxTimes(serviceNo),
+			])
+
+			if (pickupPoints.length === 0) {
+				throw new Error(`NUS service ${serviceNo} returned no pickup points`)
+			}
+
+			if (times.length === 0) {
+				throw new Error(`NUS service ${serviceNo} returned no route timing data`)
+			}
+
+			return {
+				serviceNo,
+				pickupPoints,
+				times,
+			}
+		}),
+	)
+}
+
+function getNUSMapBusStopByCode(univusBusStops: TUnivusBusStop[]) {
+	return new Map(univusBusStops.map((busStop) => [busStop.code, busStop]))
+}
+
+function getNUSStopSearchTags(
+	stopCode: string,
+	pickupPoint: TNUSPickupPoint,
+	univusBusStop: TUnivusBusStop | undefined,
+) {
+	return [
+		stopCode,
+		pickupPoint.pickupname,
+		pickupPoint.LongName,
+		pickupPoint.ShortName,
+		univusBusStop?.code,
+		univusBusStop?.name,
+		univusBusStop?.title,
+	].filter((value): value is string => Boolean(value))
+}
+
+function getNUSStopName(pickupPoint: TNUSPickupPoint, univusBusStop: TUnivusBusStop | undefined) {
+	return univusBusStop?.title || univusBusStop?.name || pickupPoint.LongName || pickupPoint.pickupname
+}
+
+function getNUSSchedule(
+	times: TNUSRouteMinMaxTime[],
+	field: "FirstTime" | "LastTime",
+): { weekdays: string; saturday: string; sunday: string } {
+	return {
+		weekdays: times.find((time) => time.DayType === "Mon-Fri")?.[field] ?? "",
+		saturday: times.find((time) => time.DayType === "Sat")?.[field] ?? "",
+		sunday: times.find((time) => time.DayType === "Sun")?.[field] ?? "",
+	}
+}
+
+function getBasicBusStop(code: string, busStopData: TTaggedBusStop[]): TBasicBusStop {
+	const busStop = getBusStopFromCode(code, busStopData)
+
+	if (!busStop) {
+		throw new Error(`Bus stop ${code} not found in generated bus stop data`)
+	}
+
+	return {
+		code: busStop.code,
+		name: busStop.name,
+		roadName: busStop.roadName,
+		latitude: busStop.latitude,
+		longitude: busStop.longitude,
+		sources: busStop.sources,
+	}
+}
+
 async function transformBusStops(
 	busStops: TLTABusStop[],
 	busRoutes: TLTABusRoute[],
+	nusRoutes: TNUSStaticRouteData,
+	univusBusStops: TUnivusBusStop[],
+	ltaServiceNos: Set<string>,
 ): Promise<TBusStopJSON> {
 	const tempBusStops: TTaggedBusStop[] = []
 
@@ -100,10 +212,51 @@ async function transformBusStops(
 			latitude: v.Latitude,
 			longitude: v.Longitude,
 			services: [...new Set(services)],
+			sources: { LTA: v.BusStopCode },
 			searchTags,
 		}
 
 		tempBusStops.push(busStop)
+	}
+
+	const nusMapBusStopByCode = getNUSMapBusStopByCode(univusBusStops)
+
+	for (const route of nusRoutes) {
+		if (ltaServiceNos.has(route.serviceNo)) {
+			console.error(
+				`Skipping NUS stop service references for ${route.serviceNo} because it collides with an LTA service`,
+			)
+			continue
+		}
+
+		for (const pickupPoint of route.pickupPoints) {
+			const nusStopCode = normalizeNUSPickupPointCode(
+				pickupPoint.busstopcode,
+				route.serviceNo,
+			)
+			const routeStopCode = NUS_TO_LTA_BUS_STOP_MAPPINGS[nusStopCode] ?? nusStopCode
+			const existingStop = tempBusStops.find((busStop) => busStop.code === routeStopCode)
+			const univusBusStop = nusMapBusStopByCode.get(nusStopCode)
+			const searchTags = getNUSStopSearchTags(nusStopCode, pickupPoint, univusBusStop)
+
+			if (existingStop) {
+				existingStop.sources.NUS = nusStopCode
+				appendUniqueValues(existingStop.services, [route.serviceNo])
+				appendUniqueValues(existingStop.searchTags, searchTags)
+				continue
+			}
+
+			tempBusStops.push({
+				code: routeStopCode,
+				name: getNUSStopName(pickupPoint, univusBusStop),
+				roadName: "",
+				latitude: univusBusStop?.latitude ?? pickupPoint.lat,
+				longitude: univusBusStop?.longitude ?? pickupPoint.lng,
+				services: [route.serviceNo],
+				sources: { NUS: nusStopCode },
+				searchTags,
+			})
+		}
 	}
 
 	const parsedBusStops = await BusStopJSONSchema.safeParseAsync({
@@ -123,6 +276,7 @@ async function transformBusServices(
 	busRoutes: TLTABusRoute[],
 	busServices: TLTABusService[],
 	busStopData: TTaggedBusStop[],
+	nusRoutes: TNUSStaticRouteData,
 ): Promise<TBusServiceJSON> {
 	const tempBusServices: TBusService[] = []
 
@@ -131,21 +285,13 @@ async function transformBusServices(
 			continue
 		}
 
-		const parsedBusRoutes = busRoutes.flatMap((route) => {
-			if (route.ServiceNo === v.ServiceNo) {
-				const busStop = getBusStopFromCode(route.BusStopCode, busStopData)
-
-				return {
-					busStop: {
-						code: route.BusStopCode,
-						name: busStop?.name ?? "",
-						roadName: busStop?.roadName ?? "",
-						latitude: busStop?.latitude ?? 0,
-						longitude: busStop?.longitude ?? 0,
-					},
-					direction: route.Direction,
-					sequence: route.StopSequence,
-					distance: route.Distance,
+			const parsedBusRoutes = busRoutes.flatMap((route) => {
+				if (route.ServiceNo === v.ServiceNo) {
+					return {
+						busStop: getBasicBusStop(route.BusStopCode, busStopData),
+						direction: route.Direction,
+						sequence: route.StopSequence,
+						distance: route.Distance,
 					firstBus: {
 						weekdays: route.WD_FirstBus.split("").toSpliced(2, 0, ":").join(""),
 						saturday: route.SAT_FirstBus.split("").toSpliced(2, 0, ":").join(""),
@@ -169,36 +315,80 @@ async function transformBusServices(
 		if (!parsed.success) {
 			console.error(`❌ Error parsing bus route: ${parsed.error}`)
 			throw new Error("Error parsing bus route")
-		}
+			}
 
-		const originBusStopInfo = getBusStopFromCode(v.OriginCode, busStopData)
-		const destinationBusStopInfo = getBusStopFromCode(v.DestinationCode, busStopData)
-
-		const busService: TBusService = {
-			serviceNo: v.ServiceNo,
-			interchanges: [
-				{
-					code: v.OriginCode,
-					name: originBusStopInfo?.name ?? "",
-					roadName: originBusStopInfo?.roadName ?? "",
-					latitude: originBusStopInfo?.latitude ?? 0,
-					longitude: originBusStopInfo?.longitude ?? 0,
-				},
-				{
-					code: v.DestinationCode,
-					name: destinationBusStopInfo?.name ?? "",
-					roadName: destinationBusStopInfo?.roadName ?? "",
-					latitude: destinationBusStopInfo?.latitude ?? 0,
-					longitude: destinationBusStopInfo?.longitude ?? 0,
-				},
-			],
-			operator: v.Operator,
-			isLoopService: v.LoopDesc !== "",
+			const busService: TBusService = {
+				serviceNo: v.ServiceNo,
+				interchanges: [
+					getBasicBusStop(v.OriginCode, busStopData),
+					getBasicBusStop(v.DestinationCode, busStopData),
+				],
+				operator: v.Operator,
+				isLoopService: v.LoopDesc !== "",
 			isSingleRoute: routes.length === 1,
 			routes,
 		}
 
 		tempBusServices.push(busService)
+	}
+
+	const ltaServiceNos = new Set(tempBusServices.map((service) => service.serviceNo))
+
+	for (const route of nusRoutes) {
+		if (ltaServiceNos.has(route.serviceNo)) {
+			console.error(
+				`Skipping NUS service ${route.serviceNo} because it collides with an LTA service`,
+			)
+			continue
+		}
+
+		const sortedPickupPoints = [...route.pickupPoints].sort((a, b) => a.seq - b.seq)
+		const routeStopCodes = sortedPickupPoints.map((pickupPoint) => {
+			const nusStopCode = normalizeNUSPickupPointCode(
+				pickupPoint.busstopcode,
+				route.serviceNo,
+			)
+			return NUS_TO_LTA_BUS_STOP_MAPPINGS[nusStopCode] ?? nusStopCode
+		})
+		const firstBus = getNUSSchedule(route.times, "FirstTime")
+		const lastBus = getNUSSchedule(route.times, "LastTime")
+
+		const routeStops = sortedPickupPoints.map((_, index) => {
+			const routeStopCode = routeStopCodes[index]
+
+			return {
+				busStop: getBasicBusStop(routeStopCode, busStopData),
+				direction: 1,
+				sequence: index + 1,
+				distance: 0,
+				firstBus,
+				lastBus,
+			} satisfies TBusRouteStop
+		})
+
+		const parsed = await z.array(BusRouteStopSchema).safeParseAsync(routeStops)
+
+		if (!parsed.success) {
+			console.error(`❌ Error parsing NUS bus route: ${parsed.error}`)
+			throw new Error("Error parsing NUS bus route")
+		}
+
+		const firstStopCode = routeStopCodes[0] ?? "-"
+		const lastStopCode = routeStopCodes[routeStopCodes.length - 1] ?? firstStopCode
+
+		const isLoopService = firstStopCode === lastStopCode
+
+		tempBusServices.push({
+			serviceNo: route.serviceNo,
+			interchanges: [
+				getBasicBusStop(firstStopCode, busStopData),
+				getBasicBusStop(isLoopService ? firstStopCode : lastStopCode, busStopData),
+			],
+			operator: "NUS",
+			isLoopService,
+			isSingleRoute: true,
+			routes: [routeStops],
+		})
 	}
 
 	const parsedBusServices = await BusServiceJSONSchema.safeParseAsync({
