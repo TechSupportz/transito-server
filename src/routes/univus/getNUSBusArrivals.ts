@@ -35,6 +35,26 @@ const emptyArrivalBus: TArrivalBus = {
 	Type: "",
 }
 
+type TNUSArrivalService = {
+	ServiceNo: string
+	Operator: "NUS"
+	NextBus: TArrivalBus
+	NextBus2: TArrivalBus
+	NextBus3: TArrivalBus
+}
+
+const arrivalBusKeys = Object.keys(emptyArrivalBus) as (keyof TArrivalBus)[]
+
+function isEmptyArrivalBus(arrivalBus: TArrivalBus) {
+	return arrivalBusKeys.every((key) => arrivalBus[key] === emptyArrivalBus[key])
+}
+
+function hasAnyArrivalBus(service: TNUSArrivalService) {
+	return [service.NextBus, service.NextBus2, service.NextBus3].some(
+		(arrivalBus) => !isEmptyArrivalBus(arrivalBus),
+	)
+}
+
 function getNUSRouteStopCode(busStopCode: string, routeCode: string) {
 	const nusStopCode = normalizeNUSPickupPointCode(busStopCode, routeCode)
 	return NUS_TO_LTA_BUS_STOP_MAPPINGS[nusStopCode] ?? nusStopCode
@@ -120,7 +140,7 @@ function getArrivalBus(
 	}
 }
 
-async function normalizeNUSShuttle(shuttle: TNUSShuttle) {
+async function normalizeNUSShuttle(shuttle: TNUSShuttle): Promise<TNUSArrivalService> {
 	const [activeBuses, pickupPoints] = await Promise.all([
 		withFallback(fetchNUSActiveBuses(shuttle.name), [], `active buses for ${shuttle.name}`),
 		withFallback(fetchNUSPickupPoints(shuttle.name), [], `pickup points for ${shuttle.name}`),
@@ -150,7 +170,9 @@ export const getNUSBusArrivals = defineRoute({
 	handler: async (ctx) => {
 		try {
 			const shuttles = await fetchNUSShuttleService(ctx.params.code)
-			const services = await Promise.all(shuttles.map(normalizeNUSShuttle))
+			const services = (await Promise.all(shuttles.map(normalizeNUSShuttle))).filter(
+				hasAnyArrivalBus,
+			)
 
 			ctx.status = 200
 			ctx.body = {
