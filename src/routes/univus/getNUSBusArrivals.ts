@@ -136,7 +136,7 @@ function getArrivalBus(
 		VisitNumber: String(index + 1),
 		Load: getNUSLoad(activeBus?.loadInfo.crowdLevel),
 		Feature: "",
-		Type: "",
+		Type: "SD", //REVIEW - Could consider this to be something diff
 	}
 }
 
