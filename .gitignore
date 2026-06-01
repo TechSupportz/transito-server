@@ -1,5 +1,7 @@
 # JSON Outputs
 *.json
+!tsconfig.app.json
+!tsconfig.test.json
 json/*.json
 
 # MacOS

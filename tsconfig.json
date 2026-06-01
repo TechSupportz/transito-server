@@ -13,8 +13,6 @@
 		},
 		"types": ["node"],
 		"resolveJsonModule": true,
-		"outDir": "./dist",
-		"rootDir": "./src",
 		"sourceMap": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -23,5 +21,6 @@
 		"noUnusedParameters": true,
 		"skipLibCheck": true
 	},
-	"exclude": ["node_modules", "dist", "workers"]
+	"files": [],
+	"references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.test.json" }]
 }
