@@ -47,19 +47,14 @@ export const generateJSON = defineRoute({
 		}
 
 		try {
-			const [
-				busStops,
-				busServices,
-				busRoutes,
-				univusBusStops,
-				nusStaticRouteData,
-			] = await Promise.all([
-				generateBusStopsJSON(),
-				generateBusServicesJSON(),
-				generateBusRoutesJSON(),
-				fetchUnivusBusStops(),
-				fetchNUSStaticRouteData(),
-			])
+			const [busStops, busServices, busRoutes, univusBusStops, nusStaticRouteData] =
+				await Promise.all([
+					generateBusStopsJSON(),
+					generateBusServicesJSON(),
+					generateBusRoutesJSON(),
+					fetchUnivusBusStops(),
+					fetchNUSStaticRouteData(),
+				])
 
 			if (!busStops || !busServices || !busRoutes || !univusBusStops || !nusStaticRouteData) {
 				throw new Error("Failed to fetch raw bus data")
@@ -93,7 +88,8 @@ export const generateJSON = defineRoute({
 				console.log("Restarting server...")
 				process.exit()
 			}, 5000)
-		} catch (e) {
+		} catch (error) {
+			console.error("❌ Error generating JSON:", error)
 			ctx.status = 500
 			ctx.body = "Internal Server Error"
 			return
@@ -155,7 +151,21 @@ function getNUSStopSearchTags(
 }
 
 function getNUSStopName(pickupPoint: TNUSPickupPoint, univusBusStop: TUnivusBusStop | undefined) {
-	return univusBusStop?.title || univusBusStop?.name || pickupPoint.LongName || pickupPoint.pickupname
+	return (
+		univusBusStop?.title ||
+		univusBusStop?.name ||
+		pickupPoint.LongName ||
+		pickupPoint.pickupname
+	)
+}
+
+function formatBusScheduleTime(time: string) {
+	if (time === "") {
+		return time
+	}
+
+	const parsedTime = DateTime.fromFormat(time, "HHmm")
+	return parsedTime.isValid ? parsedTime.toFormat("HH:mm") : time
 }
 
 function getNUSSchedule(
@@ -163,9 +173,13 @@ function getNUSSchedule(
 	field: "FirstTime" | "LastTime",
 ): { weekdays: string; saturday: string; sunday: string } {
 	return {
-		weekdays: times.find((time) => time.DayType === "Mon-Fri")?.[field] ?? "",
-		saturday: times.find((time) => time.DayType === "Sat")?.[field] ?? "",
-		sunday: times.find((time) => time.DayType === "Sun")?.[field] ?? "",
+		weekdays: formatBusScheduleTime(
+			times.find((time) => time.DayType === "Mon-Fri")?.[field] ?? "",
+		),
+		saturday: formatBusScheduleTime(
+			times.find((time) => time.DayType === "Sat")?.[field] ?? "",
+		),
+		sunday: formatBusScheduleTime(times.find((time) => time.DayType === "Sun")?.[field] ?? ""),
 	}
 }
 
@@ -246,10 +260,12 @@ async function transformBusStops(
 				continue
 			}
 
+			const nusStopName = getNUSStopName(pickupPoint, univusBusStop)
+
 			tempBusStops.push({
 				code: routeStopCode,
-				name: getNUSStopName(pickupPoint, univusBusStop),
-				roadName: "",
+				name: nusStopName,
+				roadName: `NUS ${nusStopName}`,
 				latitude: univusBusStop?.latitude ?? pickupPoint.lat,
 				longitude: univusBusStop?.longitude ?? pickupPoint.lng,
 				services: [route.serviceNo],
@@ -285,22 +301,22 @@ async function transformBusServices(
 			continue
 		}
 
-			const parsedBusRoutes = busRoutes.flatMap((route) => {
-				if (route.ServiceNo === v.ServiceNo) {
-					return {
-						busStop: getBasicBusStop(route.BusStopCode, busStopData),
-						direction: route.Direction,
-						sequence: route.StopSequence,
-						distance: route.Distance,
+		const parsedBusRoutes = busRoutes.flatMap((route) => {
+			if (route.ServiceNo === v.ServiceNo) {
+				return {
+					busStop: getBasicBusStop(route.BusStopCode, busStopData),
+					direction: route.Direction,
+					sequence: route.StopSequence,
+					distance: route.Distance,
 					firstBus: {
-						weekdays: route.WD_FirstBus.split("").toSpliced(2, 0, ":").join(""),
-						saturday: route.SAT_FirstBus.split("").toSpliced(2, 0, ":").join(""),
-						sunday: route.SUN_FirstBus.split("").toSpliced(2, 0, ":").join(""),
+						weekdays: formatBusScheduleTime(route.WD_FirstBus),
+						saturday: formatBusScheduleTime(route.SAT_FirstBus),
+						sunday: formatBusScheduleTime(route.SUN_FirstBus),
 					},
 					lastBus: {
-						weekdays: route.WD_LastBus.split("").toSpliced(2, 0, ":").join(""),
-						saturday: route.SAT_LastBus.split("").toSpliced(2, 0, ":").join(""),
-						sunday: route.SUN_LastBus.split("").toSpliced(2, 0, ":").join(""),
+						weekdays: formatBusScheduleTime(route.WD_LastBus),
+						saturday: formatBusScheduleTime(route.SAT_LastBus),
+						sunday: formatBusScheduleTime(route.SUN_LastBus),
 					},
 				} satisfies TBusRouteStop
 			} else {
@@ -315,16 +331,16 @@ async function transformBusServices(
 		if (!parsed.success) {
 			console.error(`❌ Error parsing bus route: ${parsed.error}`)
 			throw new Error("Error parsing bus route")
-			}
+		}
 
-			const busService: TBusService = {
-				serviceNo: v.ServiceNo,
-				interchanges: [
-					getBasicBusStop(v.OriginCode, busStopData),
-					getBasicBusStop(v.DestinationCode, busStopData),
-				],
-				operator: v.Operator,
-				isLoopService: v.LoopDesc !== "",
+		const busService: TBusService = {
+			serviceNo: v.ServiceNo,
+			interchanges: [
+				getBasicBusStop(v.OriginCode, busStopData),
+				getBasicBusStop(v.DestinationCode, busStopData),
+			],
+			operator: v.Operator,
+			isLoopService: v.LoopDesc !== "",
 			isSingleRoute: routes.length === 1,
 			routes,
 		}

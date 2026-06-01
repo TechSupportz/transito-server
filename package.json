@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "nodemon -r tsconfig-paths/register ./src/server.ts",
 		"build": "rm -rf dist/* && tsc -p tsconfig.app.json",
-		"start": "node dist/server.js",
+		"start": "node -r module-alias/register dist/server.js",
 		"docker:build": "docker compose up --build",
 		"docker:start": "docker start transito-server",
 		"test": "vitest run"

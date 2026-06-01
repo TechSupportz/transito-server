@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { Settings } from "luxon"
 
 const mocks = vi.hoisted(() => ({
 	generateBusRoutesJSON: vi.fn(),
@@ -49,18 +50,21 @@ vi.mock("@utils/nus-mappings", async () => {
 
 describe("generateJSON", () => {
 	const originalSecret = process.env.SECRET
+	const originalLocale = Settings.defaultLocale
 
 	beforeEach(() => {
 		vi.useFakeTimers()
 		vi.setSystemTime(new Date("2024-01-02T03:04:05.000Z"))
 		vi.resetAllMocks()
 
+		Settings.defaultLocale = "en-SG"
 		process.env.SECRET = "test-secret"
 		mocks.writeJSON.mockResolvedValue(undefined)
 	})
 
 	afterEach(() => {
 		vi.useRealTimers()
+		Settings.defaultLocale = originalLocale
 		process.env.SECRET = originalSecret
 	})
 
@@ -79,6 +83,13 @@ describe("generateJSON", () => {
 				Description: "Opp Main Rd",
 				Latitude: 1.31,
 				Longitude: 103.81,
+			},
+			{
+				BusStopCode: "16181",
+				RoadName: "Kent Ridge Cres",
+				Description: "Central Lib",
+				Latitude: 1.296,
+				Longitude: 103.773,
 			},
 		]
 		const rawBusServices = [
@@ -140,12 +151,12 @@ describe("generateJSON", () => {
 			{
 				routeid: 1,
 				seq: 2,
-				pickupname: "A1 Pickup 2",
-				LongName: "A1 Long 2",
-				ShortName: "A1 Short 2",
-				busstopcode: "NUS2",
-				lat: 1.21,
-				lng: 103.71,
+				pickupname: "Central Library",
+				LongName: "Central Library",
+				ShortName: "CLB",
+				busstopcode: "CLB",
+				lat: 1.295,
+				lng: 103.772,
 			},
 		]
 		const nusTimes = [
@@ -186,12 +197,12 @@ describe("generateJSON", () => {
 			},
 			{
 				category: ["bus_stop"],
-				code: "NUS2",
-				name: "Univus NUS2",
-				title: "A1 Title 2",
-				longitude: 103.73,
-				latitude: 1.23,
-				id: "univus-nus-2",
+				code: "CLB",
+				name: "Central Library",
+				title: "Central Library",
+				longitude: 103.772,
+				latitude: 1.295,
+				id: "univus-clb",
 			},
 		]
 
@@ -240,9 +251,23 @@ describe("generateJSON", () => {
 					searchTags: ["opposite", "road"],
 				},
 				{
+					code: "16181",
+					name: "Central Lib",
+					roadName: "Kent Ridge Cres",
+					latitude: 1.296,
+					longitude: 103.773,
+					services: ["A1"],
+					sources: { LTA: "16181", NUS: "CLB" },
+					searchTags: [
+						"library",
+						"CLB",
+						"Central Library",
+					],
+				},
+				{
 					code: "NUS1",
 					name: "A1 Title 1",
-					roadName: "",
+					roadName: "NUS A1 Title 1",
 					latitude: 1.22,
 					longitude: 103.72,
 					services: ["A1"],
@@ -255,24 +280,6 @@ describe("generateJSON", () => {
 						"NUS1",
 						"Univus NUS1",
 						"A1 Title 1",
-					],
-				},
-				{
-					code: "NUS2",
-					name: "A1 Title 2",
-					roadName: "",
-					latitude: 1.23,
-					longitude: 103.73,
-					services: ["A1"],
-					sources: { NUS: "NUS2" },
-					searchTags: [
-						"NUS2",
-						"A1 Pickup 2",
-						"A1 Long 2",
-						"A1 Short 2",
-						"NUS2",
-						"Univus NUS2",
-						"A1 Title 2",
 					],
 				},
 			],
@@ -360,18 +367,18 @@ describe("generateJSON", () => {
 						{
 							code: "NUS1",
 							name: "A1 Title 1",
-							roadName: "",
+							roadName: "NUS A1 Title 1",
 							latitude: 1.22,
 							longitude: 103.72,
 							sources: { NUS: "NUS1" },
 						},
 						{
-							code: "NUS2",
-							name: "A1 Title 2",
-							roadName: "",
-							latitude: 1.23,
-							longitude: 103.73,
-							sources: { NUS: "NUS2" },
+							code: "16181",
+							name: "Central Lib",
+							roadName: "Kent Ridge Cres",
+							latitude: 1.296,
+							longitude: 103.773,
+							sources: { LTA: "16181", NUS: "CLB" },
 						},
 					],
 					operator: "NUS",
@@ -383,7 +390,7 @@ describe("generateJSON", () => {
 								busStop: {
 									code: "NUS1",
 									name: "A1 Title 1",
-									roadName: "",
+									roadName: "NUS A1 Title 1",
 									latitude: 1.22,
 									longitude: 103.72,
 									sources: { NUS: "NUS1" },
@@ -392,37 +399,37 @@ describe("generateJSON", () => {
 								sequence: 1,
 								distance: 0,
 								firstBus: {
-									weekdays: "0700",
-									saturday: "0800",
-									sunday: "0900",
+									weekdays: "07:00",
+									saturday: "08:00",
+									sunday: "09:00",
 								},
 								lastBus: {
-									weekdays: "2300",
-									saturday: "2200",
-									sunday: "2100",
+									weekdays: "23:00",
+									saturday: "22:00",
+									sunday: "21:00",
 								},
 							},
 							{
 								busStop: {
-									code: "NUS2",
-									name: "A1 Title 2",
-									roadName: "",
-									latitude: 1.23,
-									longitude: 103.73,
-									sources: { NUS: "NUS2" },
+									code: "16181",
+									name: "Central Lib",
+									roadName: "Kent Ridge Cres",
+									latitude: 1.296,
+									longitude: 103.773,
+									sources: { LTA: "16181", NUS: "CLB" },
 								},
 								direction: 1,
 								sequence: 2,
 								distance: 0,
 								firstBus: {
-									weekdays: "0700",
-									saturday: "0800",
-									sunday: "0900",
+									weekdays: "07:00",
+									saturday: "08:00",
+									sunday: "09:00",
 								},
 								lastBus: {
-									weekdays: "2300",
-									saturday: "2200",
-									sunday: "2100",
+									weekdays: "23:00",
+									saturday: "22:00",
+									sunday: "21:00",
 								},
 							},
 						],

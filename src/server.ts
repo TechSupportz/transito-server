@@ -1,4 +1,3 @@
-import "module-alias/register"
 import "dotenv/config"
 import Koa from "koa"
 import bodyParser from "koa-bodyparser"
@@ -23,8 +22,8 @@ import { buildRoute } from "@utils/route-builder"
 const app = new Koa()
 const router = new Router()
 
-// Default timezone set to Singapore for Luxon
-Settings.defaultLocale = "en_SG"
+// Default locale set to Singapore for Luxon
+Settings.defaultLocale = "en-SG"
 
 app.use(bodyParser())
 app.use(json())
