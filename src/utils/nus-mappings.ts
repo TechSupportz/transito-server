@@ -1,4 +1,4 @@
-export const NUS_SERVICE_CODES = ["A1", "A2", "D1", "D2", "K", "R1", "R2"]
+export const NUS_SERVICE_CODES = ["A1", "A2", "D1", "D2", "K", "R1", "R2", "P"]
 
 export const NUS_TO_LTA_BUS_STOP_MAPPINGS: Record<string, string> = {
 	CLB: "16181",
