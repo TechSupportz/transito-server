@@ -85,28 +85,28 @@ describe("getNUSBusArrivals", () => {
 		expect(ctx.status).toBe(200)
 		expect(body.Services).toHaveLength(1)
 		expect(body.Services[0].ServiceNo).toBe("D1")
-		expect(body.Services[0].NextBus.EstimatedArrival).toBe("2026-06-01T12:30:00+08:00")
+		expect(body.Services[0].NextBus.EstimatedArrival).toBe("2026-06-01T12:05:00+08:00")
 		expect(body.Services[0].NextBus2.EstimatedArrival).toBe("")
 		expect(body.Services[0].NextBus3.EstimatedArrival).toBe("")
 	})
 
-	it("filters ETAs that are more than 5 minutes in the past before selecting the next 3 buses", async () => {
+	it("formats arrival timestamps from ETA minutes rounded to the nearest minute", async () => {
 		vi.useFakeTimers()
-		vi.setSystemTime(new Date("2026-06-01T12:00:00+08:00"))
+		vi.setSystemTime(new Date("2026-06-01T12:00:31+08:00"))
 
 		mocks.fetchNUSShuttleService.mockResolvedValue([
 			makeShuttle("A1", [
 				{
-					eta: 0,
-					eta_s: 10,
+					eta: 1,
+					eta_s: 60,
 					ts: "2026-06-01 11:54:59",
 					plate: "SBS1A",
 					jobid: 1,
 					px: "",
 				},
 				{
-					eta: 0,
-					eta_s: 11,
+					eta: 2,
+					eta_s: 120,
 					ts: "2026-06-01 11:55:00",
 					plate: "SBS2A",
 					jobid: 2,
@@ -153,8 +153,8 @@ describe("getNUSBusArrivals", () => {
 
 		expect(ctx.status).toBe(200)
 		expect(body.Services).toHaveLength(1)
-		expect(body.Services[0].NextBus.EstimatedArrival).toBe("2026-06-01T11:55:00+08:00")
-		expect(body.Services[0].NextBus2.EstimatedArrival).toBe("2026-06-01T12:05:00+08:00")
-		expect(body.Services[0].NextBus3.EstimatedArrival).toBe("2026-06-01T12:10:00+08:00")
+		expect(body.Services[0].NextBus.EstimatedArrival).toBe("2026-06-01T12:02:00+08:00")
+		expect(body.Services[0].NextBus2.EstimatedArrival).toBe("2026-06-01T12:03:00+08:00")
+		expect(body.Services[0].NextBus3.EstimatedArrival).toBe("2026-06-01T12:06:00+08:00")
 	})
 })

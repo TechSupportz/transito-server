@@ -29,7 +29,6 @@ const emptyArrivalBus: TLTABusArrival = {
 	Type: "",
 }
 
-const staleArrivalThresholdMinutes = 3
 const arrivalBusKeys = Object.keys(emptyArrivalBus) as (keyof TLTABusArrival)[]
 
 function isEmptyArrivalBus(arrivalBus: TLTABusArrival) {
@@ -60,30 +59,22 @@ function getNUSLoad(crowdLevel: string | undefined) {
 	}
 }
 
-function parseNUSArrivalTime(timestamp: string) {
-	return DateTime.fromFormat(timestamp, "yyyy-MM-dd HH:mm:ss", {
-		zone: "Asia/Singapore",
-	})
-}
+function formatNUSArrivalTime(etaMinutes: number) {
+	const arrivalTime = DateTime.now().setZone("Asia/Singapore").plus({ minutes: etaMinutes })
+	const roundedArrivalTime =
+		arrivalTime.second >= 30
+			? arrivalTime.plus({ minutes: 1 }).startOf("minute")
+			: arrivalTime.startOf("minute")
 
-function formatNUSArrivalTime(timestamp: string) {
-	const parsedTimestamp = parseNUSArrivalTime(timestamp)
-
-	return parsedTimestamp.isValid
-		? (parsedTimestamp.toISO({ suppressMilliseconds: true }) ?? "")
-		: ""
-}
-
-function isStaleNUSArrivalTime(timestamp: string, now = DateTime.now()) {
-	const parsedTimestamp = parseNUSArrivalTime(timestamp)
 	return (
-		parsedTimestamp.isValid &&
-		parsedTimestamp < now.minus({ minutes: staleArrivalThresholdMinutes })
+		roundedArrivalTime.toISO({
+			suppressMilliseconds: true,
+		}) ?? ""
 	)
 }
 
 function getValidNUSEtas(etas: TNUSShuttle["_etas"]) {
-	return etas.filter((eta) => !isStaleNUSArrivalTime(eta.ts))
+	return etas.filter((eta) => eta.eta >= 0)
 }
 
 async function withFallback<T>(promise: Promise<T>, fallback: T, label: string) {
@@ -130,7 +121,7 @@ function getArrivalBus(
 	return {
 		OriginCode: originCode,
 		DestinationCode: destinationCode,
-		EstimatedArrival: formatNUSArrivalTime(eta.ts),
+		EstimatedArrival: formatNUSArrivalTime(eta.eta),
 		Monitored: activeBus ? 1 : 0,
 		Latitude: activeBus ? String(activeBus.lat) : "",
 		Longitude: activeBus ? String(activeBus.lng) : "",
