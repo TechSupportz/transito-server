@@ -122,10 +122,43 @@ export const NUSActiveBusResponseSchema = z.object({
 	}),
 })
 
+export const LTABusArrivalSchema = z.object({
+	OriginCode: z.string(),
+	DestinationCode: z.string(),
+	EstimatedArrival: z.string(),
+	Monitored: z.union([z.literal(0), z.literal(1)]),
+	Latitude: z.string(),
+	Longitude: z.string(),
+	VisitNumber: z.string(),
+	Load: z.enum(["SEA", "SDA", "LSD", ""]),
+	Feature: z.enum(["WAB", ""]),
+	Type: z.enum(["SD", "DD", "BD", ""]),
+})
+
+export const LTABusArrivalServiceSchema = z.object({
+	ServiceNo: z.string(),
+	Operator: z.enum(["SBST", "SMRT", "TTS", "GAS"]),
+	NextBus: LTABusArrivalSchema,
+	NextBus2: LTABusArrivalSchema,
+	NextBus3: LTABusArrivalSchema,
+})
+
+export const NUSArrivalServiceSchema = z.object({
+	ServiceNo: z.string(),
+	Operator: z.literal("NUS"),
+	NextBus: LTABusArrivalSchema,
+	NextBus2: LTABusArrivalSchema,
+	NextBus3: LTABusArrivalSchema,
+})
+
 export type TUnivusAccessTokenResponse = z.infer<typeof UnivusAccessTokenResponseSchema>
 export type TUnivusJwtPayload = z.infer<typeof UnivusJwtPayloadSchema>
 export type TUnivusMapsDataResponse = z.infer<typeof UnivusMapsDataResponseSchema>
 export type TUnivusBusStop = z.infer<typeof UnivusMapDataItemSchema>
+export type TLTABusArrival = z.infer<typeof LTABusArrivalSchema>
+export type TLTABusArrivalService = z.infer<typeof LTABusArrivalServiceSchema>
+export type TNUSArrivalEta = z.infer<typeof NUSETAValueSchema>
+export type TNUSArrivalService = z.infer<typeof NUSArrivalServiceSchema>
 export type TNUSShuttle = z.infer<typeof NUSShuttleSchema>
 export type TNUSPickupPoint = z.infer<typeof NUSPickupPointSchema>
 export type TNUSRouteMinMaxTime = z.infer<typeof NUSRouteMinMaxTimeSchema>

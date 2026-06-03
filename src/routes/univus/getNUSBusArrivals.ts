@@ -3,26 +3,20 @@ import {
 	fetchNUSPickupPoints,
 	fetchNUSShuttleService,
 } from "@fetchers/nus-eta-fetcher"
-import { TNUSActiveBus, TNUSPickupPoint, TNUSShuttle } from "@app-types/univus-type"
+import {
+	TLTABusArrival,
+	TNUSActiveBus,
+	TNUSArrivalEta,
+	TNUSArrivalService,
+	TNUSPickupPoint,
+	TNUSShuttle,
+} from "@app-types/univus-type"
 import { defineRoute } from "@utils/route-builder"
 import { NUS_TO_LTA_BUS_STOP_MAPPINGS, normalizeNUSPickupPointCode } from "@utils/nus-mappings"
 import { DateTime } from "luxon"
 import { z } from "zod"
 
-type TArrivalBus = {
-	OriginCode: string
-	DestinationCode: string
-	EstimatedArrival: string
-	Monitored: number
-	Latitude: string
-	Longitude: string
-	VisitNumber: string
-	Load: string
-	Feature: string
-	Type: string
-}
-
-const emptyArrivalBus: TArrivalBus = {
+const emptyArrivalBus: TLTABusArrival = {
 	OriginCode: "",
 	DestinationCode: "",
 	EstimatedArrival: "",
@@ -35,17 +29,10 @@ const emptyArrivalBus: TArrivalBus = {
 	Type: "",
 }
 
-type TNUSArrivalService = {
-	ServiceNo: string
-	Operator: "NUS"
-	NextBus: TArrivalBus
-	NextBus2: TArrivalBus
-	NextBus3: TArrivalBus
-}
+const staleArrivalThresholdMinutes = 3
+const arrivalBusKeys = Object.keys(emptyArrivalBus) as (keyof TLTABusArrival)[]
 
-const arrivalBusKeys = Object.keys(emptyArrivalBus) as (keyof TArrivalBus)[]
-
-function isEmptyArrivalBus(arrivalBus: TArrivalBus) {
+function isEmptyArrivalBus(arrivalBus: TLTABusArrival) {
 	return arrivalBusKeys.every((key) => arrivalBus[key] === emptyArrivalBus[key])
 }
 
@@ -73,14 +60,30 @@ function getNUSLoad(crowdLevel: string | undefined) {
 	}
 }
 
-function formatNUSArrivalTime(timestamp: string) {
-	const parsedTimestamp = DateTime.fromFormat(timestamp, "yyyy-MM-dd HH:mm:ss", {
+function parseNUSArrivalTime(timestamp: string) {
+	return DateTime.fromFormat(timestamp, "yyyy-MM-dd HH:mm:ss", {
 		zone: "Asia/Singapore",
 	})
+}
+
+function formatNUSArrivalTime(timestamp: string) {
+	const parsedTimestamp = parseNUSArrivalTime(timestamp)
 
 	return parsedTimestamp.isValid
 		? (parsedTimestamp.toISO({ suppressMilliseconds: true }) ?? "")
 		: ""
+}
+
+function isStaleNUSArrivalTime(timestamp: string, now = DateTime.now()) {
+	const parsedTimestamp = parseNUSArrivalTime(timestamp)
+	return (
+		parsedTimestamp.isValid &&
+		parsedTimestamp < now.minus({ minutes: staleArrivalThresholdMinutes })
+	)
+}
+
+function getValidNUSEtas(etas: TNUSShuttle["_etas"]) {
+	return etas.filter((eta) => !isStaleNUSArrivalTime(eta.ts))
 }
 
 async function withFallback<T>(promise: Promise<T>, fallback: T, label: string) {
@@ -113,13 +116,11 @@ function getRouteBoundaryCodes(routeCode: string, pickupPoints: TNUSPickupPoint[
 }
 
 function getArrivalBus(
-	shuttle: TNUSShuttle,
-	index: number,
+	eta: TNUSArrivalEta | undefined,
 	activeBusByPlate: Map<string, TNUSActiveBus>,
 	originCode: string,
 	destinationCode: string,
-): TArrivalBus {
-	const eta = shuttle._etas[index]
+): TLTABusArrival {
 	if (!eta) {
 		return emptyArrivalBus
 	}
@@ -130,10 +131,10 @@ function getArrivalBus(
 		OriginCode: originCode,
 		DestinationCode: destinationCode,
 		EstimatedArrival: formatNUSArrivalTime(eta.ts),
-		Monitored: 1,
+		Monitored: activeBus ? 1 : 0,
 		Latitude: activeBus ? String(activeBus.lat) : "",
 		Longitude: activeBus ? String(activeBus.lng) : "",
-		VisitNumber: String(index + 1),
+		VisitNumber: "1",
 		Load: getNUSLoad(activeBus?.loadInfo.crowdLevel),
 		Feature: "",
 		Type: "SD", //REVIEW - Could consider this to be something diff
@@ -149,13 +150,14 @@ async function normalizeNUSShuttle(shuttle: TNUSShuttle): Promise<TNUSArrivalSer
 		activeBuses.map((activeBus) => [activeBus.vehplate, activeBus]),
 	)
 	const { originCode, destinationCode } = getRouteBoundaryCodes(shuttle.name, pickupPoints)
+	const validEtas = getValidNUSEtas(shuttle._etas)
 
 	return {
 		ServiceNo: shuttle.name,
 		Operator: "NUS",
-		NextBus: getArrivalBus(shuttle, 0, activeBusByPlate, originCode, destinationCode),
-		NextBus2: getArrivalBus(shuttle, 1, activeBusByPlate, originCode, destinationCode),
-		NextBus3: getArrivalBus(shuttle, 2, activeBusByPlate, originCode, destinationCode),
+		NextBus: getArrivalBus(validEtas[0], activeBusByPlate, originCode, destinationCode),
+		NextBus2: getArrivalBus(validEtas[1], activeBusByPlate, originCode, destinationCode),
+		NextBus3: getArrivalBus(validEtas[2], activeBusByPlate, originCode, destinationCode),
 	}
 }
 
