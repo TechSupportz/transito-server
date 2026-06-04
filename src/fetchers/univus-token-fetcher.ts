@@ -12,7 +12,7 @@ let univusToken: (TUnivusAccessTokenResponse["data"] & { expiry_timestamp: numbe
 const fallbackUnivusDeviceId = randomUUID()
 
 function getUnivusDeviceId() {
-	return process.env.UNIVUS_DEVICE_ID ?? fallbackUnivusDeviceId
+	return process.env.UNIVUS_DEVICE_ID ||fallbackUnivusDeviceId
 }
 
 function decodeUnivusTokenExpiry(token: string) {

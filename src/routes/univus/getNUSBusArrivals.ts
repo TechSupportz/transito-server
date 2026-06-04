@@ -77,6 +77,10 @@ function getValidNUSEtas(etas: TNUSShuttle["_etas"]) {
 	return etas.filter((eta) => eta.eta >= 0)
 }
 
+function isEndingTerminalShuttle(shuttle: TNUSShuttle) {
+	return shuttle.busstopcode.endsWith("-E")
+}
+
 async function withFallback<T>(promise: Promise<T>, fallback: T, label: string) {
 	try {
 		return await Promise.race([
@@ -163,9 +167,13 @@ export const getNUSBusArrivals = defineRoute({
 	handler: async (ctx) => {
 		try {
 			const shuttles = await fetchNUSShuttleService(ctx.params.code)
-			const services = (await Promise.all(shuttles.map(normalizeNUSShuttle))).filter(
-				hasAnyArrivalBus,
-			)
+			const services = (
+				await Promise.all(
+					shuttles
+						.filter((shuttle) => !isEndingTerminalShuttle(shuttle))
+						.map(normalizeNUSShuttle),
+				)
+			).filter(hasAnyArrivalBus)
 
 			ctx.status = 200
 			ctx.body = {

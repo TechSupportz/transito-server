@@ -90,6 +90,57 @@ describe("getNUSBusArrivals", () => {
 		expect(body.Services[0].NextBus3.EstimatedArrival).toBe("")
 	})
 
+	it("does not return ending terminal shuttle rows", async () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date("2026-06-01T12:00:00+08:00"))
+
+		mocks.fetchNUSShuttleService.mockResolvedValue([
+			{
+				...makeShuttle("D1", [
+					{
+						eta: 1,
+						eta_s: 55,
+						ts: "2026-06-01 12:01:00",
+						plate: "PD533T",
+						jobid: 1,
+						px: "",
+					},
+				]),
+				busstopcode: "COM3-D1-E",
+			},
+			makeShuttle("A1", [
+				{
+					eta: 5,
+					eta_s: 300,
+					ts: "2026-06-01 12:05:00",
+					plate: "SBS1A",
+					jobid: 2,
+					px: "",
+				},
+			]),
+		])
+
+		const ctx = {
+			params: { code: "COM3" },
+			status: 0,
+			body: undefined as unknown,
+		}
+
+		await getNUSBusArrivals.handler(
+			ctx as Parameters<typeof getNUSBusArrivals.handler>[0],
+		)
+
+		const body = ctx.body as { Services: TArrivalServiceResponse[] }
+
+		expect(ctx.status).toBe(200)
+		expect(body.Services).toHaveLength(1)
+		expect(body.Services[0].ServiceNo).toBe("A1")
+		expect(mocks.fetchNUSActiveBuses).toHaveBeenCalledOnce()
+		expect(mocks.fetchNUSActiveBuses).toHaveBeenCalledWith("A1")
+		expect(mocks.fetchNUSPickupPoints).toHaveBeenCalledOnce()
+		expect(mocks.fetchNUSPickupPoints).toHaveBeenCalledWith("A1")
+	})
+
 	it("formats arrival timestamps from ETA minutes rounded to the nearest minute", async () => {
 		vi.useFakeTimers()
 		vi.setSystemTime(new Date("2026-06-01T12:00:31+08:00"))
