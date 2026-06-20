@@ -45,7 +45,7 @@ app.use(async (ctx, next) => {
 router.get("/", async (ctx) => {
 	ctx.status = 200
 	ctx.body = {
-		message: "Transito's server is running as expected!",
+		message: "Transito's server is running as expected! Version 3.0.0",
 		last_updated: { bus_stop: busStopUpdatedAt, bus_service: busServiceUpdatedAt },
 	}
 })
