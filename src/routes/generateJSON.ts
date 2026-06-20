@@ -238,7 +238,7 @@ async function transformBusStops(
 	for (const route of nusRoutes) {
 		if (ltaServiceNos.has(route.serviceNo)) {
 			console.error(
-				`Skipping NUS stop service references for ${route.serviceNo} because it collides with an LTA service`,
+				`Skipping NUS stop service interchanges for ${route.serviceNo} because it collides with an LTA service`,
 			)
 			continue
 		}

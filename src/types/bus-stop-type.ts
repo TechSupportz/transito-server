@@ -48,6 +48,13 @@ export const NearbyBusStopSchema = z.object({
 
 export const BasicBusStopSchema = BusStopSchema.omit({ services: true })
 
+export const BusStopServiceInterchangeSchema = z.object({
+	serviceNo: z.string(),
+	originStopCode: z.string().min(1),
+	destinationStopCode: z.string().min(1),
+	direction: z.union([z.literal(1), z.literal(2)]),
+})
+
 export const abbrMappings: Record<any, string> = {
 	"a'space": "aerospace",
 	ably: "assembly",
@@ -247,4 +254,5 @@ export type TBusStop = z.infer<typeof BusStopSchema>
 export type TBusStopJSON = z.infer<typeof BusStopJSONSchema>
 export type TNearbyBusStop = z.infer<typeof NearbyBusStopSchema>
 export type TBasicBusStop = z.infer<typeof BasicBusStopSchema>
+export type TBusStopServiceInterchange = z.infer<typeof BusStopServiceInterchangeSchema>
 export type TTaggedBusStop = z.infer<typeof TaggedBusStopSchema>

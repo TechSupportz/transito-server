@@ -1,4 +1,5 @@
 import { getBusStopFromCode } from "@utils/bus-stops"
+import { getBusStopServiceInterchanges } from "@utils/bus-services"
 import { defineRoute } from "@utils/route-builder"
 import { z } from "zod"
 
@@ -21,16 +22,12 @@ export const getBusStopServices = defineRoute({
 			return
 		}
 
+		const serviceInterchanges = getBusStopServiceInterchanges(busStop.code, busStop.services)
+
 		ctx.status = 200
 		ctx.body = {
-			count: busStop.services.length,
-			data: busStop.services,
+			count: serviceInterchanges.length,
+			data: serviceInterchanges,
 		}
-
-		// ctx.status = 200
-		// ctx.body = {
-		// 	count: busStop.services.length,
-		// 	data: busStop.services,
-		// }
 	},
 })
