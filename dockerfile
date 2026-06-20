@@ -1,12 +1,12 @@
-FROM node:20-alpine AS base
+FROM node:25-alpine AS base
 
-RUN npm i -g pnpm@10.27.0
+RUN npm i -g pnpm@11.5.0
 
 FROM base AS dependencies
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM base AS build
 
@@ -30,4 +30,4 @@ COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 80
 
-CMD [ "node", "dist/server.js" ]
+CMD [ "node", "-r", "module-alias/register", "dist/server.js" ]
