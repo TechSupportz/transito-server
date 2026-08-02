@@ -116,6 +116,9 @@ dist
 # Docusaurus cache and generated files
 .docusaurus
 
+# Teach skill workspace
+lesson/
+
 # Serverless directories
 .serverless/
 

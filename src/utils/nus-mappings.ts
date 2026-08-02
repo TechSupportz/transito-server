@@ -16,6 +16,7 @@ export const NUS_TO_LTA_BUS_STOP_MAPPINGS: Record<string, string> = {
 	KRB: "16009",
 	"JP-SCH-16151": "16151",
 	LT27: "18301",
+	S17: "18309",
 	SDE3: "16149",
 	"SDE3-OPP": "16141",
 	CG: "41029",
