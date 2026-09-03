@@ -3,14 +3,17 @@ import type { TNUSShuttle } from "@app-types/univus-type"
 
 const mocks = vi.hoisted(() => ({
 	fetchNUSActiveBuses: vi.fn(),
-	fetchNUSPickupPoints: vi.fn(),
 	fetchNUSShuttleService: vi.fn(),
+	getBusServiceFromServiceNo: vi.fn(),
 }))
 
 vi.mock("@fetchers/nus-eta-fetcher", () => ({
 	fetchNUSActiveBuses: mocks.fetchNUSActiveBuses,
-	fetchNUSPickupPoints: mocks.fetchNUSPickupPoints,
 	fetchNUSShuttleService: mocks.fetchNUSShuttleService,
+}))
+
+vi.mock("@utils/bus-services", () => ({
+	getBusServiceFromServiceNo: mocks.getBusServiceFromServiceNo,
 }))
 
 import { getNUSBusArrivals } from "@routes/univus/getNUSBusArrivals"
@@ -32,6 +35,8 @@ type TArrivalServiceResponse = {
 	ServiceNo: string
 	NextBus: {
 		EstimatedArrival: string
+		OriginCode: string
+		DestinationCode: string
 	}
 	NextBus2: {
 		EstimatedArrival: string
@@ -45,7 +50,11 @@ describe("getNUSBusArrivals", () => {
 	beforeEach(() => {
 		vi.resetAllMocks()
 		mocks.fetchNUSActiveBuses.mockResolvedValue([])
-		mocks.fetchNUSPickupPoints.mockResolvedValue([])
+		mocks.getBusServiceFromServiceNo.mockImplementation((serviceNo: string) => ({
+			serviceNo,
+			operator: "NUS",
+			interchanges: [{ code: "ORIGIN" }, { code: "DESTINATION" }],
+		}))
 	})
 
 	afterEach(() => {
@@ -86,6 +95,8 @@ describe("getNUSBusArrivals", () => {
 		expect(body.Services).toHaveLength(1)
 		expect(body.Services[0].ServiceNo).toBe("D1")
 		expect(body.Services[0].NextBus.EstimatedArrival).toBe("2026-06-01T12:05:00+08:00")
+		expect(body.Services[0].NextBus.OriginCode).toBe("ORIGIN")
+		expect(body.Services[0].NextBus.DestinationCode).toBe("DESTINATION")
 		expect(body.Services[0].NextBus2.EstimatedArrival).toBe("")
 		expect(body.Services[0].NextBus3.EstimatedArrival).toBe("")
 	})
@@ -137,8 +148,8 @@ describe("getNUSBusArrivals", () => {
 		expect(body.Services[0].ServiceNo).toBe("A1")
 		expect(mocks.fetchNUSActiveBuses).toHaveBeenCalledOnce()
 		expect(mocks.fetchNUSActiveBuses).toHaveBeenCalledWith("A1")
-		expect(mocks.fetchNUSPickupPoints).toHaveBeenCalledOnce()
-		expect(mocks.fetchNUSPickupPoints).toHaveBeenCalledWith("A1")
+		expect(mocks.getBusServiceFromServiceNo).toHaveBeenCalledOnce()
+		expect(mocks.getBusServiceFromServiceNo).toHaveBeenCalledWith("A1")
 	})
 
 	it("formats arrival timestamps from ETA minutes rounded to the nearest minute", async () => {

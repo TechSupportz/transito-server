@@ -155,7 +155,8 @@ function getNUSStopName(pickupPoint: TNUSPickupPoint, univusBusStop: TUnivusBusS
 		univusBusStop?.title ||
 		univusBusStop?.name ||
 		pickupPoint.LongName ||
-		pickupPoint.pickupname
+		pickupPoint.pickupname ||
+		pickupPoint.busstopcode
 	)
 }
 

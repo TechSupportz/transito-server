@@ -34,53 +34,56 @@ export const UnivusMapsDataResponseSchema = z.object({
 	ts: z.string(),
 })
 
-const NUSETAValueSchema = z.object({
-	eta: z.number(),
-	eta_s: z.number(),
+export const NUSBusProxyEnvelopeSchema = z.object({
+	data: z.unknown(),
+	code: z.string(),
+	msg: z.string(),
 	ts: z.string(),
-	plate: z.string(),
-	jobid: z.number(),
-	px: z.string(),
+})
+
+const NUSETAValueSchema = z.object({
+	eta: z.coerce.number(),
+	eta_s: z.coerce.number().optional(),
+	ts: z.string().optional(),
+	plate: z.string().optional().default(""),
+	jobid: z.coerce.number().optional(),
+	px: z.string().optional(),
 })
 
 export const NUSShuttleSchema = z.object({
 	name: z.string(),
-	routeid: z.number(),
+	routeid: z.coerce.number().optional(),
 	busstopcode: z.string(),
 	_etas: z.array(NUSETAValueSchema),
-	arrivalTime: z.string(),
-	nextArrivalTime: z.string(),
-	passengers: z.string(),
-	nextPassengers: z.string(),
-	arrivalTime_veh_plate: z.string(),
-	nextArrivalTime_veh_plate: z.string(),
+	arrivalTime: z.string().optional(),
+	nextArrivalTime: z.string().optional(),
+	passengers: z.string().optional(),
+	nextPassengers: z.string().optional(),
+	arrivalTime_veh_plate: z.string().optional(),
+	nextArrivalTime_veh_plate: z.string().optional(),
 })
 
-export const NUSShuttleServiceResponseSchema = z.object({
-	ShuttleServiceResult: z.object({
-		TimeStamp: z.string(),
-		caption: z.string(),
-		name: z.string(),
-		shuttles: z.array(NUSShuttleSchema),
-		hints: z.array(z.unknown()),
-	}),
+export const NUSShuttleServiceDataSchema = z.object({
+	TimeStamp: z.string().optional(),
+	caption: z.string().optional(),
+	name: z.string().optional(),
+	shuttles: z.array(NUSShuttleSchema),
+	hints: z.array(z.unknown()).optional(),
 })
 
 export const NUSPickupPointSchema = z.object({
-	routeid: z.number(),
-	seq: z.number(),
-	pickupname: z.string(),
+	routeid: z.coerce.number().optional(),
+	seq: z.coerce.number(),
+	pickupname: z.string().optional(),
 	LongName: z.string(),
-	ShortName: z.string(),
+	ShortName: z.string().optional(),
 	busstopcode: z.string(),
-	lat: z.number(),
-	lng: z.number(),
+	lat: z.coerce.number(),
+	lng: z.coerce.number(),
 })
 
-export const NUSPickupPointResponseSchema = z.object({
-	PickupPointResult: z.object({
-		pickuppoint: z.array(NUSPickupPointSchema),
-	}),
+export const NUSPickupPointDataSchema = z.object({
+	pickuppoint: z.array(NUSPickupPointSchema),
 })
 
 export const NUSRouteMinMaxTimeSchema = z.object({
@@ -90,36 +93,32 @@ export const NUSRouteMinMaxTimeSchema = z.object({
 	LastTime: z.string(),
 	ScheduleType: z.string(),
 	DayType: z.string(),
-	DayName: z.string().optional(),
-	Dates: z.string().optional(),
+	DayName: z.string().nullish(),
+	Dates: z.string().nullish(),
 })
 
-export const NUSRouteMinMaxTimeResponseSchema = z.object({
-	RouteMinMaxTimeResult: z.object({
-		RouteMinMaxTime: z.array(NUSRouteMinMaxTimeSchema),
-	}),
+export const NUSRouteMinMaxTimeDataSchema = z.object({
+	RouteMinMaxTime: z.array(NUSRouteMinMaxTimeSchema),
 })
 
 export const NUSActiveBusSchema = z.object({
 	vehplate: z.string(),
-	lat: z.number(),
-	lng: z.number(),
-	speed: z.number(),
-	direction: z.number(),
+	lat: z.coerce.number(),
+	lng: z.coerce.number(),
+	speed: z.coerce.number().optional(),
+	direction: z.coerce.number().optional(),
 	loadInfo: z.object({
-		occupancy: z.number(),
-		crowdLevel: z.string(),
-		capacity: z.number(),
-		ridership: z.number(),
-	}),
+		occupancy: z.coerce.number().optional(),
+		crowdLevel: z.string().optional(),
+		capacity: z.coerce.number().optional(),
+		ridership: z.coerce.number().optional(),
+	}).optional(),
 })
 
-export const NUSActiveBusResponseSchema = z.object({
-	ActiveBusResult: z.object({
-		TimeStamp: z.string(),
-		ActiveBusCount: z.string(),
-		activebus: z.array(NUSActiveBusSchema),
-	}),
+export const NUSActiveBusDataSchema = z.object({
+	TimeStamp: z.string().optional(),
+	ActiveBusCount: z.string().optional(),
+	activebus: z.array(NUSActiveBusSchema),
 })
 
 export const LTABusArrivalSchema = z.object({

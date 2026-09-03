@@ -32,6 +32,8 @@ UNIVUS_APP_API=$(curl -s "http://metadata.google.internal/computeMetadata/v1/ins
 
 UNIVUS_HTD_API=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/UNIVUS_HTD_API" -H "Metadata-Flavor: Google")
 
+UNIVUS_VERSION=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/UNIVUS_VERSION" -H "Metadata-Flavor: Google")
+
 NUS_ETA_TOKEN=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/NUS_ETA_TOKEN" -H "Metadata-Flavor: Google")
 
 # 5. START CF TUNNEL
@@ -52,6 +54,7 @@ docker run -d \
   -e ONEMAP_PASSWORD="$ONEMAP_PASSWORD" \
   -e UNIVUS_APP_API="$UNIVUS_APP_API" \
   -e UNIVUS_HTD_API="$UNIVUS_HTD_API" \
+  -e UNIVUS_VERSION="$UNIVUS_VERSION" \
   -e NUS_ETA_TOKEN="$NUS_ETA_TOKEN" \
   -e PORT=80 \
   $IMAGE_URL

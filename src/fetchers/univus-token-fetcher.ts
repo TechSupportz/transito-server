@@ -12,7 +12,15 @@ let univusToken: (TUnivusAccessTokenResponse["data"] & { expiry_timestamp: numbe
 const fallbackUnivusDeviceId = randomUUID()
 
 function getUnivusDeviceId() {
-	return process.env.UNIVUS_DEVICE_ID ||fallbackUnivusDeviceId
+	return process.env.UNIVUS_DEVICE_ID || fallbackUnivusDeviceId
+}
+
+function getUnivusRequestDetails() {
+	return {
+		deviceid: getUnivusDeviceId(),
+		ipaddr: process.env.UNIVUS_IP_ADDRESS ?? "",
+		version: process.env.UNIVUS_VERSION ?? "",
+	}
 }
 
 function decodeUnivusTokenExpiry(token: string) {
@@ -65,12 +73,12 @@ export async function getUnivusSession() {
 	) {
 		return {
 			...univusToken,
-			deviceid: getUnivusDeviceId(),
+			...getUnivusRequestDetails(),
 		}
 	}
 
 	await fetchNewUnivusToken()
-	return univusToken ? { ...univusToken, deviceid: getUnivusDeviceId() } : null
+	return univusToken ? { ...univusToken, ...getUnivusRequestDetails() } : null
 }
 
 export async function getUnivusToken(): Promise<string | null> {

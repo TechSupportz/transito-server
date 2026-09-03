@@ -1,18 +1,13 @@
-import {
-	fetchNUSActiveBuses,
-	fetchNUSPickupPoints,
-	fetchNUSShuttleService,
-} from "@fetchers/nus-eta-fetcher"
+import { fetchNUSActiveBuses, fetchNUSShuttleService } from "@fetchers/nus-eta-fetcher"
 import {
 	TLTABusArrival,
 	TNUSActiveBus,
 	TNUSArrivalEta,
 	TNUSArrivalService,
-	TNUSPickupPoint,
 	TNUSShuttle,
 } from "@app-types/univus-type"
+import { getBusServiceFromServiceNo } from "@utils/bus-services"
 import { defineRoute } from "@utils/route-builder"
-import { NUS_TO_LTA_BUS_STOP_MAPPINGS, normalizeNUSPickupPointCode } from "@utils/nus-mappings"
 import { DateTime } from "luxon"
 import { z } from "zod"
 
@@ -39,11 +34,6 @@ function hasAnyArrivalBus(service: TNUSArrivalService) {
 	return [service.NextBus, service.NextBus2, service.NextBus3].some(
 		(arrivalBus) => !isEmptyArrivalBus(arrivalBus),
 	)
-}
-
-function getNUSRouteStopCode(busStopCode: string, routeCode: string) {
-	const nusStopCode = normalizeNUSPickupPointCode(busStopCode, routeCode)
-	return NUS_TO_LTA_BUS_STOP_MAPPINGS[nusStopCode] ?? nusStopCode
 }
 
 function getNUSLoad(crowdLevel: string | undefined) {
@@ -95,18 +85,15 @@ async function withFallback<T>(promise: Promise<T>, fallback: T, label: string) 
 	}
 }
 
-function getRouteBoundaryCodes(routeCode: string, pickupPoints: TNUSPickupPoint[]) {
-	const sortedPickupPoints = [...pickupPoints].sort((a, b) => a.seq - b.seq)
-	const firstPickupPoint = sortedPickupPoints[0]
-	const lastPickupPoint = sortedPickupPoints[sortedPickupPoints.length - 1]
+function getRouteBoundaryCodes(routeCode: string) {
+	const busService = getBusServiceFromServiceNo(routeCode)
+	if (busService?.operator !== "NUS") {
+		return { originCode: "", destinationCode: "" }
+	}
 
 	return {
-		originCode: firstPickupPoint
-			? getNUSRouteStopCode(firstPickupPoint.busstopcode, routeCode)
-			: "",
-		destinationCode: lastPickupPoint
-			? getNUSRouteStopCode(lastPickupPoint.busstopcode, routeCode)
-			: "",
+		originCode: busService.interchanges[0]?.code ?? "",
+		destinationCode: busService.interchanges[1]?.code ?? "",
 	}
 }
 
@@ -130,21 +117,22 @@ function getArrivalBus(
 		Latitude: activeBus ? String(activeBus.lat) : "",
 		Longitude: activeBus ? String(activeBus.lng) : "",
 		VisitNumber: "1",
-		Load: getNUSLoad(activeBus?.loadInfo.crowdLevel),
+		Load: getNUSLoad(activeBus?.loadInfo?.crowdLevel),
 		Feature: "",
 		Type: "SD", //REVIEW - Could consider this to be something diff
 	}
 }
 
 async function normalizeNUSShuttle(shuttle: TNUSShuttle): Promise<TNUSArrivalService> {
-	const [activeBuses, pickupPoints] = await Promise.all([
-		withFallback(fetchNUSActiveBuses(shuttle.name), [], `active buses for ${shuttle.name}`),
-		withFallback(fetchNUSPickupPoints(shuttle.name), [], `pickup points for ${shuttle.name}`),
-	])
+	const activeBuses = await withFallback(
+		fetchNUSActiveBuses(shuttle.name),
+		[],
+		`active buses for ${shuttle.name}`,
+	)
 	const activeBusByPlate = new Map(
 		activeBuses.map((activeBus) => [activeBus.vehplate, activeBus]),
 	)
-	const { originCode, destinationCode } = getRouteBoundaryCodes(shuttle.name, pickupPoints)
+	const { originCode, destinationCode } = getRouteBoundaryCodes(shuttle.name)
 	const validEtas = getValidNUSEtas(shuttle._etas)
 
 	return {
