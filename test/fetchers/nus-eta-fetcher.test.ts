@@ -14,6 +14,7 @@ import {
 	fetchNUSRouteMinMaxTimes,
 	fetchNUSShuttleService,
 } from "@fetchers/nus-eta-fetcher"
+import { UpstreamError } from "@utils/upstream-error"
 
 function response(data: unknown, code = "00000", msg = "") {
 	return new Response(
@@ -184,6 +185,20 @@ describe("NUS ETA proxy fetcher", () => {
 
 		await expect(fetchNUSShuttleService("COM3")).rejects.toThrow("Invalid API Key")
 		expect(fetchMock).toHaveBeenCalledOnce()
+	})
+
+	it("marks upstream failures as NUS upstream errors", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response("Something went wrong", { status: 200 }),
+		)
+
+		await expect(fetchNUSShuttleService("COM3")).rejects.toBeInstanceOf(UpstreamError)
+	})
+
+	it("does not mark a missing NUS_ETA_TOKEN as an upstream error", async () => {
+		vi.stubEnv("NUS_ETA_TOKEN", "")
+
+		await expect(fetchNUSShuttleService("COM3")).rejects.not.toBeInstanceOf(UpstreamError)
 	})
 
 	it("rejects non-success application codes even when HTTP succeeds", async () => {

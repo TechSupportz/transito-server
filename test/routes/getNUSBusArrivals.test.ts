@@ -17,6 +17,7 @@ vi.mock("@utils/bus-services", () => ({
 }))
 
 import { getNUSBusArrivals } from "@routes/univus/getNUSBusArrivals"
+import { UpstreamError } from "@utils/upstream-error"
 
 const makeShuttle = (name: string, etas: TNUSShuttle["_etas"]): TNUSShuttle => ({
 	name,
@@ -59,6 +60,28 @@ describe("getNUSBusArrivals", () => {
 
 	afterEach(() => {
 		vi.useRealTimers()
+	})
+
+	it("reports upstream NUS failures as 502 with the provider", async () => {
+		mocks.fetchNUSShuttleService.mockRejectedValue(new UpstreamError("nus", "Invalid API Key"))
+
+		const ctx = { params: { code: "KR-MRT" }, status: 0, body: undefined as unknown }
+
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
+
+		expect(ctx.status).toBe(502)
+		expect(ctx.body).toMatchObject({ provider: "nus" })
+	})
+
+	it("reports its own failures as 500", async () => {
+		mocks.fetchNUSShuttleService.mockRejectedValue(new TypeError("boom"))
+
+		const ctx = { params: { code: "KR-MRT" }, status: 0, body: undefined as unknown }
+
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
+
+		expect(ctx.status).toBe(500)
+		expect(ctx.body).not.toHaveProperty("provider")
 	})
 
 	it("does not return services when NextBus, NextBus2, and NextBus3 are all empty", async () => {

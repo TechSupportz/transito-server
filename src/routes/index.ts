@@ -1,3 +1,6 @@
+export * from "@routes/alerts/deleteAnnouncement"
+export * from "@routes/alerts/getAlerts"
+export * from "@routes/alerts/putAnnouncement"
 export * from "@routes/generateJSON"
 export * from "@routes/getBusService"
 export * from "@routes/getBusStop"

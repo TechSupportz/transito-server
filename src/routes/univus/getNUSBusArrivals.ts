@@ -8,6 +8,7 @@ import {
 } from "@app-types/univus-type"
 import { getBusServiceFromServiceNo } from "@utils/bus-services"
 import { defineRoute } from "@utils/route-builder"
+import { UpstreamError } from "@utils/upstream-error"
 import { DateTime } from "luxon"
 import { z } from "zod"
 
@@ -170,6 +171,16 @@ export const getNUSBusArrivals = defineRoute({
 				Services: services,
 			}
 		} catch (error) {
+			if (error instanceof UpstreamError) {
+				ctx.status = 502
+				ctx.body = {
+					message: "NUS bus arrivals are unavailable",
+					provider: error.provider,
+					error: error.message,
+				}
+				return
+			}
+
 			ctx.status = 500
 			ctx.body = {
 				message: "Error fetching NUS bus arrivals",

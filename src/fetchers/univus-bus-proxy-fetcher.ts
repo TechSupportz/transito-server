@@ -6,12 +6,32 @@ import {
 	getNUSBusProxyApiKey,
 	TNUSBusProxyRoute,
 } from "@utils/nus-api"
+import { UpstreamError } from "@utils/upstream-error"
 import { z } from "zod"
 
 export async function fetchUnivusBusProxy<T>(
 	route: TNUSBusProxyRoute,
 	params: Record<string, string>,
 	dataSchema: z.ZodType<T>,
+): Promise<T> {
+	const apiKey = getNUSBusProxyApiKey()
+
+	try {
+		return await requestUnivusBusProxy(route, params, dataSchema, apiKey)
+	} catch (error) {
+		throw new UpstreamError(
+			"nus",
+			error instanceof Error ? error.message : "NUS bus proxy request failed",
+			{ cause: error },
+		)
+	}
+}
+
+async function requestUnivusBusProxy<T>(
+	route: TNUSBusProxyRoute,
+	params: Record<string, string>,
+	dataSchema: z.ZodType<T>,
+	apiKey: string,
 ): Promise<T> {
 	const session = await getUnivusSession()
 	if (!session) {
@@ -20,7 +40,7 @@ export async function fetchUnivusBusProxy<T>(
 
 	const res = await fetch(buildNUSBusProxyUrl(route), {
 		method: "POST",
-		headers: buildNUSBusProxyHeaders(getNUSBusProxyApiKey(), session.token),
+		headers: buildNUSBusProxyHeaders(apiKey, session.token),
 		body: JSON.stringify({
 			...params,
 			token: session.token,

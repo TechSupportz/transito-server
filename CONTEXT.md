@@ -64,6 +64,26 @@ _Avoid_: Static route data
 Additional live or static context attached to a bus arrival when it can be resolved.
 _Avoid_: Required arrival data
 
+**Alert**:
+Anything shown to users in the alert inbox: either an **Outage** or an **Announcement**.
+_Avoid_: Notification, banner
+
+**Outage**:
+A detected, temporary unavailability of LTA, NUS, or Transito's own server. An Outage begins when failures are observed and ends on its own when the dependency recovers.
+_Avoid_: Provider Outage, downtime alert
+
+**Announcement**:
+An authored message published by the Transito operator. An Announcement starts and ends when its author decides, and carries an **Alert Severity**.
+_Avoid_: Broadcast, notice, push message
+
+**Alert Severity**:
+How loudly an Announcement demands attention. Only critical Announcements interrupt the user unprompted, and they cannot be dismissed while active; every other Alert waits in the inbox.
+_Avoid_: Priority, level
+
+**Offline**:
+The state where a device cannot reach any dependency at the network level. Being Offline is never an Outage.
+_Avoid_: Network outage, connection down
+
 ## Relationships
 
 - A **Bus Stop** has one or more **Provider Sources**, keyed by transport data provider.
@@ -86,6 +106,11 @@ _Avoid_: Required arrival data
 - A **Service Route** may contain **Route Markers** that resolve to real **Bus Stops**.
 - A **Bus Arrival** is live operational data, not part of the static service catalogue.
 - A **Bus Arrival** may have **Arrival Enrichment**, but remains valid without it.
+- An **Outage** is detected independently on each device from that device's own requests; it is never shared between users or stored by the server.
+- An **Outage** of NUS is reported by the server as an upstream failure, distinct from a failure of Transito's server itself.
+- A user only sees an **Outage** of a dependency their own requests relied on.
+- An **Outage** has no **Alert Severity**; it never interrupts the user unprompted.
+- An **Announcement** is authored only by the Transito operator and is seen by every user while it is active.
 
 ## Example dialogue
 

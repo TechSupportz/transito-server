@@ -4,6 +4,9 @@
 !tsconfig.test.json
 json/*.json
 
+# Announcement store
+data/
+
 # MacOS
 .DS_Store
 

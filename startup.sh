@@ -48,6 +48,7 @@ docker run -d \
   --name transito-server \
   --restart always \
   --network host \
+  -v transito-data:/app/data \
   -e LTA_API_KEY="$LTA_API_KEY" \
   -e SECRET="$JSON_SECRET" \
   -e ONEMAP_EMAIL="$ONEMAP_EMAIL" \
