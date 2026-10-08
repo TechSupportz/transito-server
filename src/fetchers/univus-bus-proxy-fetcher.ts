@@ -6,8 +6,10 @@ import {
 	getNUSBusProxyApiKey,
 	TNUSBusProxyRoute,
 } from "@utils/nus-api"
-import { UpstreamError } from "@utils/upstream-error"
+import { isTimeoutError, UpstreamError } from "@utils/upstream-error"
 import { z } from "zod"
+
+const NUS_BUS_PROXY_TIMEOUT_MS = 10_000
 
 export async function fetchUnivusBusProxy<T>(
 	route: TNUSBusProxyRoute,
@@ -22,7 +24,7 @@ export async function fetchUnivusBusProxy<T>(
 		throw new UpstreamError(
 			"nus",
 			error instanceof Error ? error.message : "NUS bus proxy request failed",
-			{ cause: error },
+			{ cause: error, timedOut: isTimeoutError(error) },
 		)
 	}
 }
@@ -40,6 +42,7 @@ async function requestUnivusBusProxy<T>(
 
 	const res = await fetch(buildNUSBusProxyUrl(route), {
 		method: "POST",
+		signal: AbortSignal.timeout(NUS_BUS_PROXY_TIMEOUT_MS),
 		headers: buildNUSBusProxyHeaders(apiKey, session.token),
 		body: JSON.stringify({
 			...params,

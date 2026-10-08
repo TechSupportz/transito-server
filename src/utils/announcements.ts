@@ -33,7 +33,10 @@ async function writeAnnouncements(announcements: TAnnouncement[]) {
 }
 
 function updateAnnouncements<T>(
-	update: (announcements: TAnnouncement[], now: Date) => { announcements: TAnnouncement[]; result: T },
+	update: (
+		announcements: TAnnouncement[],
+		now: Date,
+	) => { announcements: TAnnouncement[]; result: T },
 ): Promise<T> {
 	const run = writeQueue.then(async () => {
 		const now = new Date()
@@ -49,7 +52,9 @@ function updateAnnouncements<T>(
 }
 
 function isExpired(announcement: TAnnouncement, now: Date) {
-	return announcement.expiresAt !== undefined && Date.parse(announcement.expiresAt) <= now.getTime()
+	return (
+		announcement.expiresAt !== undefined && Date.parse(announcement.expiresAt) <= now.getTime()
+	)
 }
 
 export function isAnnouncementActive(announcement: TAnnouncement, now: Date) {
@@ -58,11 +63,12 @@ export function isAnnouncementActive(announcement: TAnnouncement, now: Date) {
 	return hasStarted && !isExpired(announcement, now)
 }
 
-export async function getActiveAnnouncements(now = new Date()) {
+export async function getActiveAnnouncements(at?: Date) {
 	await writeQueue
-	return (await readAnnouncements()).filter((announcement) =>
-		isAnnouncementActive(announcement, now),
-	)
+	const announcements = await readAnnouncements()
+	// Sampled after the awaits so a request delayed behind writes cannot return expired Announcements
+	const now = at ?? new Date()
+	return announcements.filter((announcement) => isAnnouncementActive(announcement, now))
 }
 
 export function upsertAnnouncement(id: string, content: TAnnouncementContent) {

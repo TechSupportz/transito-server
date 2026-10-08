@@ -172,7 +172,8 @@ export const getNUSBusArrivals = defineRoute({
 			}
 		} catch (error) {
 			if (error instanceof UpstreamError) {
-				ctx.status = 502
+				// The app treats a 504 as a timeout, which never counts as a NUS Outage
+				ctx.status = error.timedOut ? 504 : 502
 				ctx.body = {
 					message: "NUS bus arrivals are unavailable",
 					provider: error.provider,

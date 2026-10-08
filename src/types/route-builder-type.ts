@@ -21,6 +21,8 @@ export type TRouteBuilderSpec<
 > = {
 	method: HttpMethod
 	path: string
+	/** Requires the shared server `SECRET` header, checked before request validation. */
+	requiresSecret?: boolean
 	validate?: TRouteValidationSchema<B, Q, P, H>
 	handler: (
 		ctx: RouterContext & {

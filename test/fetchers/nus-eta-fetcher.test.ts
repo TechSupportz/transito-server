@@ -73,6 +73,7 @@ describe("NUS ETA proxy fetcher", () => {
 			"https://inetapps.nus.edu.sg/univus/api/bus-proxy/shuttle-service",
 			{
 				method: "POST",
+				signal: expect.any(AbortSignal),
 				headers: {
 					Accept: "application/json",
 					Authorization: "Bearer sanitized-access-token",

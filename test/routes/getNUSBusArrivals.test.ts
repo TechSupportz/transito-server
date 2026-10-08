@@ -73,6 +73,21 @@ describe("getNUSBusArrivals", () => {
 		expect(ctx.body).toMatchObject({ provider: "nus" })
 	})
 
+	it("reports upstream NUS timeouts as 504 so they never count as an Outage", async () => {
+		mocks.fetchNUSShuttleService.mockRejectedValue(
+			new UpstreamError("nus", "The operation was aborted due to timeout", {
+				timedOut: true,
+			}),
+		)
+
+		const ctx = { params: { code: "KR-MRT" }, status: 0, body: undefined as unknown }
+
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
+
+		expect(ctx.status).toBe(504)
+		expect(ctx.body).toMatchObject({ provider: "nus" })
+	})
+
 	it("reports its own failures as 500", async () => {
 		mocks.fetchNUSShuttleService.mockRejectedValue(new TypeError("boom"))
 
@@ -108,9 +123,7 @@ describe("getNUSBusArrivals", () => {
 			body: undefined as unknown,
 		}
 
-		await getNUSBusArrivals.handler(
-			ctx as Parameters<typeof getNUSBusArrivals.handler>[0],
-		)
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
 
 		const body = ctx.body as { Services: TArrivalServiceResponse[] }
 
@@ -160,9 +173,7 @@ describe("getNUSBusArrivals", () => {
 			body: undefined as unknown,
 		}
 
-		await getNUSBusArrivals.handler(
-			ctx as Parameters<typeof getNUSBusArrivals.handler>[0],
-		)
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
 
 		const body = ctx.body as { Services: TArrivalServiceResponse[] }
 
@@ -230,9 +241,7 @@ describe("getNUSBusArrivals", () => {
 			body: undefined as unknown,
 		}
 
-		await getNUSBusArrivals.handler(
-			ctx as Parameters<typeof getNUSBusArrivals.handler>[0],
-		)
+		await getNUSBusArrivals.handler(ctx as Parameters<typeof getNUSBusArrivals.handler>[0])
 
 		const body = ctx.body as { Services: TArrivalServiceResponse[] }
 

@@ -5,19 +5,13 @@ import { defineRoute } from "@utils/route-builder"
 export const deleteAnnouncement = defineRoute({
 	method: "delete",
 	path: "/alerts/announcements/:id",
+	requiresSecret: true,
 	validate: {
-		headers: z.object({ secret: z.string() }),
 		params: z.object({
 			id: z.string().min(1, { message: "Announcement id is required" }),
 		}),
 	},
 	handler: async (ctx) => {
-		if (!process.env.SECRET || ctx.request.headers.secret !== process.env.SECRET) {
-			ctx.status = 401
-			ctx.body = "Unauthorized"
-			return
-		}
-
 		try {
 			const deleted = await removeAnnouncement(ctx.params.id)
 

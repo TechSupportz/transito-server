@@ -47,6 +47,17 @@ export const validateRoute = <
 	}
 }
 
+/** Rejects requests without the shared server `SECRET`, including when the server has none set. */
+const requireSecret = async (ctx: DefaultContext, next: () => Promise<any>) => {
+	const secret = ctx.request.headers.secret
+	if (!process.env.SECRET || secret !== process.env.SECRET) {
+		ctx.status = 401
+		ctx.body = "Unauthorized"
+		return
+	}
+	await next()
+}
+
 export const buildRoute = <
 	B extends z.ZodRawShape = any,
 	Q extends z.ZodRawShape = any,
@@ -56,8 +67,12 @@ export const buildRoute = <
 	router: Router,
 	spec: TRouteBuilderSpec<B, Q, P, H>,
 ) => {
-	const { method, path, validate, handler } = spec
+	const { method, path, requiresSecret, validate, handler } = spec
 	const routeMiddlewares = []
+
+	if (requiresSecret) {
+		routeMiddlewares.push(requireSecret)
+	}
 
 	if (validate) {
 		routeMiddlewares.push(validateRoute(validate))
