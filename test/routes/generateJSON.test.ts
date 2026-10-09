@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
 	fetchNUSPickupPoints: vi.fn(),
 	fetchNUSRouteMinMaxTimes: vi.fn(),
 	fetchUnivusBusStops: vi.fn(),
+	fetchNUSCheckpoints: vi.fn(),
+	publishRouteDistanceIndex: vi.fn(),
 	writeJSON: vi.fn(),
 }))
 
@@ -26,6 +28,14 @@ vi.mock("@fetchers/bus-stops-fetcher", () => ({
 vi.mock("@fetchers/nus-eta-fetcher", () => ({
 	fetchNUSPickupPoints: mocks.fetchNUSPickupPoints,
 	fetchNUSRouteMinMaxTimes: mocks.fetchNUSRouteMinMaxTimes,
+}))
+
+vi.mock("@fetchers/nus-checkpoint-fetcher", () => ({
+	fetchNUSCheckpoints: mocks.fetchNUSCheckpoints,
+}))
+
+vi.mock("@utils/route-distance-index-upload", () => ({
+	publishRouteDistanceIndex: mocks.publishRouteDistanceIndex,
 }))
 
 vi.mock("@fetchers/univus-maps-data-fetcher", () => ({
@@ -212,6 +222,12 @@ describe("generateJSON", () => {
 		mocks.fetchUnivusBusStops.mockResolvedValue(univusBusStops)
 		mocks.fetchNUSPickupPoints.mockResolvedValue(nusPickupPoints)
 		mocks.fetchNUSRouteMinMaxTimes.mockResolvedValue(nusTimes)
+		mocks.fetchNUSCheckpoints.mockResolvedValue([
+			{ latitude: 1.2, longitude: 103.7, isbusstop: true },
+			{ latitude: 1.2, longitude: 103.71, isbusstop: null },
+			{ latitude: 1.21, longitude: 103.71, isbusstop: true },
+		])
+		mocks.publishRouteDistanceIndex.mockResolvedValue("uploaded")
 
 		const { generateJSON } = await import("../../src/routes/generateJSON")
 		const ctx = {
@@ -227,6 +243,9 @@ describe("generateJSON", () => {
 		expect(ctx.status).toBe(201)
 		expect(ctx.body).toEqual({ message: "JSON files generated" })
 		expect(mocks.writeJSON).toHaveBeenCalledTimes(2)
+		expect(mocks.publishRouteDistanceIndex).toHaveBeenCalledWith(
+			mocks.writeJSON.mock.calls[1][1],
+		)
 		expect(mocks.writeJSON).toHaveBeenNthCalledWith(1, "bus-stops", {
 			metadata: expect.any(String),
 			data: [
@@ -420,7 +439,7 @@ describe("generateJSON", () => {
 								},
 								direction: 1,
 								sequence: 2,
-								distance: 0,
+								distance: 2.224,
 								firstBus: {
 									weekdays: "07:00",
 									saturday: "08:00",

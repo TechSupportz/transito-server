@@ -49,8 +49,12 @@ The first and last service times that apply to a service route.
 _Avoid_: Per-stop schedule
 
 **Route Distance**:
-The provider-supplied cumulative distance for a stop within a service route.
+The cumulative distance for a stop within a service route, supplied by the provider or measured along the provider's route path.
 _Avoid_: Estimated distance
+
+**Route Distance Index**:
+A compact copy of every service route's stop sequence and **Route Distances**, published for the app to measure how far a bus is from a stop along its route.
+_Avoid_: Distance cache, route geometry
 
 **Route Marker**:
 A route-specific pickup point identifier that marks a position in a service route but is not a separate bus stop.
@@ -104,6 +108,7 @@ _Avoid_: Network outage, connection down
 - A **Service Route** has a **Route Operating Window** that may be shown on each stop in that route.
 - A **Service Route** may have unknown **Route Distance** when the provider does not supply one.
 - A **Service Route** may contain **Route Markers** that resolve to real **Bus Stops**.
+- The **Route Distance Index** is derived from the **Static Catalogue** and only includes **Service Routes** whose **Route Distance** is known and never decreases.
 - A **Bus Arrival** is live operational data, not part of the static service catalogue.
 - A **Bus Arrival** may have **Arrival Enrichment**, but remains valid without it.
 - An **Outage** is detected independently on each device from that device's own requests; it is never shared between users or stored by the server.

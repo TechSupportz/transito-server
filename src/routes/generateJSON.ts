@@ -9,6 +9,7 @@ import { generateBusRoutesJSON } from "@fetchers/bus-routes-fetcher"
 import { generateBusServicesJSON } from "@fetchers/bus-services-fetcher"
 import { generateBusStopsJSON } from "@fetchers/bus-stops-fetcher"
 import { fetchNUSPickupPoints, fetchNUSRouteMinMaxTimes } from "@fetchers/nus-eta-fetcher"
+import { fetchNUSCheckpoints } from "@fetchers/nus-checkpoint-fetcher"
 import { fetchUnivusBusStops } from "@fetchers/univus-maps-data-fetcher"
 import { BusRouteStopSchema, TBusRouteStop, TLTABusRoute } from "@app-types/bus-route-type"
 import {
@@ -24,12 +25,19 @@ import {
 	TBasicBusStop,
 	TTaggedBusStop,
 } from "@app-types/bus-stop-type"
-import { TNUSPickupPoint, TNUSRouteMinMaxTime, TUnivusBusStop } from "@app-types/univus-type"
+import {
+	TNUSCheckpoint,
+	TNUSPickupPoint,
+	TNUSRouteMinMaxTime,
+	TUnivusBusStop,
+} from "@app-types/univus-type"
 import {
 	NUS_SERVICE_CODES,
 	NUS_TO_LTA_BUS_STOP_MAPPINGS,
 	normalizeNUSPickupPointCode,
 } from "@utils/nus-mappings"
+import { getNUSRouteStopDistances } from "@utils/nus-route-distances"
+import { publishRouteDistanceIndex } from "@utils/route-distance-index-upload"
 
 export const generateJSON = defineRoute({
 	method: "post",
@@ -78,6 +86,7 @@ export const generateJSON = defineRoute({
 
 			await writeJSON("bus-stops", transformedBusStops)
 			await writeJSON("bus-services", transformedBusServices)
+			await publishRouteDistanceIndex(transformedBusServices)
 
 			ctx.status = 201
 			ctx.body = {
@@ -101,6 +110,7 @@ type TNUSStaticRoute = {
 	serviceNo: string
 	pickupPoints: TNUSPickupPoint[]
 	times: TNUSRouteMinMaxTime[]
+	checkpoints: TNUSCheckpoint[] | null
 }
 
 type TNUSStaticRouteData = TNUSStaticRoute[]
@@ -108,9 +118,10 @@ type TNUSStaticRouteData = TNUSStaticRoute[]
 async function fetchNUSStaticRouteData(): Promise<TNUSStaticRouteData> {
 	return Promise.all(
 		NUS_SERVICE_CODES.map(async (serviceNo) => {
-			const [pickupPoints, times] = await Promise.all([
+			const [pickupPoints, times, checkpoints] = await Promise.all([
 				fetchNUSPickupPoints(serviceNo),
 				fetchNUSRouteMinMaxTimes(serviceNo),
+				fetchNUSCheckpoints(serviceNo),
 			])
 
 			if (pickupPoints.length === 0) {
@@ -125,6 +136,7 @@ async function fetchNUSStaticRouteData(): Promise<TNUSStaticRouteData> {
 				serviceNo,
 				pickupPoints,
 				times,
+				checkpoints,
 			}
 		}),
 	)
@@ -369,6 +381,11 @@ async function transformBusServices(
 		})
 		const firstBus = getNUSSchedule(route.times, "FirstTime")
 		const lastBus = getNUSSchedule(route.times, "LastTime")
+		const distances = getNUSRouteStopDistances(
+			route.serviceNo,
+			route.checkpoints,
+			sortedPickupPoints.length,
+		)
 
 		const routeStops = sortedPickupPoints.map((_, index) => {
 			const routeStopCode = routeStopCodes[index]
@@ -377,7 +394,7 @@ async function transformBusServices(
 				busStop: getBasicBusStop(routeStopCode, busStopData),
 				direction: 1,
 				sequence: index + 1,
-				distance: 0,
+				distance: distances?.[index] ?? 0,
 				firstBus,
 				lastBus,
 			} satisfies TBusRouteStop

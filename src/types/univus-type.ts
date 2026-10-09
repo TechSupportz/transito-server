@@ -121,6 +121,24 @@ export const NUSActiveBusDataSchema = z.object({
 	activebus: z.array(NUSActiveBusSchema),
 })
 
+// Unlike z.coerce.number(), rejects null and "" instead of turning them into 0.
+const NUSCoordinateSchema = z.union([z.number(), z.string().trim().min(1).pipe(z.coerce.number())])
+
+export const NUSCheckpointSchema = z.object({
+	PointID: z.coerce.string().optional(),
+	routeid: z.coerce.number().optional(),
+	latitude: NUSCoordinateSchema,
+	longitude: NUSCoordinateSchema,
+	isbusstop: z.boolean().nullish(),
+	busstopcode: z.string().nullish(),
+	busstoplatitude: z.coerce.number().nullish(),
+	busstoplongitude: z.coerce.number().nullish(),
+})
+
+export const NUSCheckpointDataSchema = z.object({
+	CheckPoint: z.array(NUSCheckpointSchema),
+})
+
 export const LTABusArrivalSchema = z.object({
 	OriginCode: z.string(),
 	DestinationCode: z.string(),
@@ -162,3 +180,4 @@ export type TNUSShuttle = z.infer<typeof NUSShuttleSchema>
 export type TNUSPickupPoint = z.infer<typeof NUSPickupPointSchema>
 export type TNUSRouteMinMaxTime = z.infer<typeof NUSRouteMinMaxTimeSchema>
 export type TNUSActiveBus = z.infer<typeof NUSActiveBusSchema>
+export type TNUSCheckpoint = z.infer<typeof NUSCheckpointSchema>

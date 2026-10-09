@@ -31,6 +31,7 @@
 		"@koa/cors": "^5.0.0",
 		"@koa/router": "^15.4.0",
 		"dotenv": "^17.4.2",
+		"firebase-admin": "^14.5.0",
 		"geolib": "^3.3.14",
 		"koa": "^3.2.0",
 		"koa-bodyparser": "^4.4.1",
