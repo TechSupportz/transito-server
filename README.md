@@ -21,6 +21,18 @@ It uses Google application default credentials:
 
 With `ENV=dev`, the upload only runs when `FIREBASE_STORAGE_EMULATOR_HOST` is set. Without credentials, the upload is skipped with a warning.
 
+### Beta server
+The beta server runs from `docker-compose.beta.yml` behind a Cloudflare Tunnel pointed at `http://localhost:8088`. `docker-compose.yml` is the production image that CI builds and pushes, so leave it alone.
+
+```sh
+cp .env.example .env   # then fill in the values
+docker compose -f docker-compose.beta.yml up -d --build
+curl http://localhost:8088/
+curl -X POST http://localhost:8088/generate-json --header "secret: $SECRET"
+```
+
+To publish the route distance index from beta, put a service account key at `secrets/firebase-sa.json` and set `GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/firebase-sa.json` in `.env`.
+
 ### Links
 [Check out the main Transito repository](https://github.com/TechSupportz/transito-flutter)
 

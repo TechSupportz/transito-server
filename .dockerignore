@@ -5,3 +5,5 @@ node_modules
 dist
 workers
 /src/json/*.json
+.env
+secrets

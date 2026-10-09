@@ -1,0 +1,31 @@
+# Beta server (relic-01, behind a Cloudflare Tunnel). docker-compose.yml stays the production image used by CI.
+services:
+    transito-server:
+        build:
+            context: .
+            dockerfile: dockerfile
+        working_dir: /app
+        container_name: transito-server
+        image: transito-server:local
+        restart: unless-stopped
+        ports:
+            - "${HOST_PORT:-8088}:8080"
+        environment:
+            PORT: 8080
+            ENV: ${ENV:-}
+            LTA_API_KEY: ${LTA_API_KEY:-}
+            SECRET: ${SECRET:-}
+            ONEMAP_EMAIL: ${ONEMAP_EMAIL:-}
+            ONEMAP_PASSWORD: ${ONEMAP_PASSWORD:-}
+            NUS_ETA_TOKEN: ${NUS_ETA_TOKEN:-}
+            UNIVUS_APP_API: ${UNIVUS_APP_API:-}
+            UNIVUS_HTD_API: ${UNIVUS_HTD_API:-}
+            UNIVUS_DEVICE_ID: ${UNIVUS_DEVICE_ID:-}
+            UNIVUS_IP_ADDRESS: ${UNIVUS_IP_ADDRESS:-}
+            UNIVUS_VERSION: ${UNIVUS_VERSION:-}
+            GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+        volumes:
+            - transito-data:/app/data
+            - ./secrets:/app/secrets:ro
+volumes:
+    transito-data:
