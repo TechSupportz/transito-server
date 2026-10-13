@@ -30,7 +30,9 @@
 	"dependencies": {
 		"@koa/cors": "^5.0.0",
 		"@koa/router": "^15.4.0",
+		"@mapbox/polyline": "^1.2.1",
 		"dotenv": "^17.4.2",
+		"fast-xml-parser": "^5.11.2",
 		"firebase-admin": "^14.5.0",
 		"geolib": "^3.3.14",
 		"koa": "^3.2.0",
@@ -41,6 +43,7 @@
 		"luxon": "^3.7.2",
 		"minisearch": "^7.2.0",
 		"module-alias": "^2.3.4",
+		"simplify-js": "^1.2.4",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
@@ -51,6 +54,7 @@
 		"@types/koa__cors": "^5.0.1",
 		"@types/lodash": "^4.17.24",
 		"@types/luxon": "^3.7.1",
+		"@types/mapbox__polyline": "^1.0.5",
 		"@types/node": "^25.6.0",
 		"nodemon": "^3.1.14",
 		"ts-node": "^10.9.2",

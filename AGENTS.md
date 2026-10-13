@@ -44,7 +44,8 @@ path alias (see `test/routes/generateJSON.test.ts`).
 - Path aliases `@routes`, `@fetchers`, `@utils`, `@app-types`, `@json` are declared three times:
   `tsconfig.json` (dev), `_moduleAliases` in `package.json` (built `dist/`), and
   `vitest.config.ts`. Change all three together.
-- `workers/transito-refresh/`: Cloudflare cron worker that calls `POST /generate-json` weekly.
+- `workers/transito-refresh/`: Cloudflare cron worker that starts `POST /generate-json` weekly, polls
+  `GET /generate-json/last-run` every minute, and reports the run's summary on Telegram.
 
 ## Conventions
 
@@ -53,7 +54,12 @@ path alias (see `test/routes/generateJSON.test.ts`).
   `publishRouteDistanceIndex` are, so the route file stays an orchestrator.
 - Required data failing fails the whole run before any file is written, so the previous complete
   catalogue stays in place. Optional data degrades instead: NUS checkpoints leave Route Distance
-  unknown, and the index upload is best effort.
+  unknown, Route Shapes fall back or stay null
+  (`docs/adr/0003-build-route-shapes-from-lta-kml-with-onemap-fallback.md`), and the index upload
+  is best effort.
+- `POST /generate-json` replies 202 and runs in the background, because a run outlasts Cloudflare's
+  125 s proxy timeout; a second request while one runs gets 409. The run's status and summary are
+  saved to `last-generate-json-run.json` in the data directory for `GET /generate-json/last-run`.
 - A successful run exits the process after 5 seconds so its container restarts with the new
   catalogue.
 - Protect operator-only routes with `requiresSecret: true` (see `src/routes/alerts/putAnnouncement.ts`).

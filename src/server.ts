@@ -8,6 +8,7 @@ import { busServiceUpdatedAt, busStopUpdatedAt } from "@json"
 import {
 	deleteAnnouncement,
 	generateJSON,
+	getLastGenerateJSONRun,
 	getAlerts,
 	getBusService,
 	getBusStop,
@@ -55,6 +56,7 @@ router.get("/", async (ctx) => {
 
 // JSON Routes
 buildRoute(router, generateJSON)
+buildRoute(router, getLastGenerateJSONRun)
 
 // Bus Stop Routes
 buildRoute(router, getBusStop)

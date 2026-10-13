@@ -41,7 +41,20 @@ export const SearchOneMapResponseSchema = z.object({
 	data: z.array(SearchOneMapDataSchema),
 })
 
+export const OneMapBusRouteSegmentSchema = z.object({
+	START_BUS_STOP_NUM: z.string(),
+	END_BUS_STOP_NUM: z.string(),
+	GEOMETRIES: z.string(),
+})
+
+export const OneMapBusRoutesResponseSchema = z.object({
+	BUS_DIRECTION_ONE: z.array(OneMapBusRouteSegmentSchema).optional(),
+	BUS_DIRECTION_TWO: z.array(OneMapBusRouteSegmentSchema).optional(),
+})
+
 export type TOneMapTokenResponse = z.infer<typeof OneMapTokenResponseSchema>
 export type TOneMapAPISearchResponse = z.infer<typeof OneMapAPISearchResponseSchema>
 export type TSearchOneMapData = z.infer<typeof SearchOneMapDataSchema>
 export type TSearchOneMap = z.infer<typeof SearchOneMapResponseSchema>
+export type TOneMapBusRouteSegment = z.infer<typeof OneMapBusRouteSegmentSchema>
+export type TOneMapBusRoutesResponse = z.infer<typeof OneMapBusRoutesResponseSchema>

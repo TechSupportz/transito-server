@@ -38,6 +38,10 @@ import {
 } from "@utils/nus-mappings"
 import { getNUSRouteStopDistances } from "@utils/nus-route-distances"
 import { publishRouteDistanceIndex } from "@utils/route-distance-index-upload"
+import { roundTo } from "@utils/geo"
+import { buildRoutePolylines, createEmptySummary, TRoutePolylineResult } from "@utils/route-shapes"
+import { startGenerateJSONRun } from "@utils/generate-json-runs"
+import { TGenerateJSONSummary } from "@app-types/generate-json-run-type"
 
 export const generateJSON = defineRoute({
 	method: "post",
@@ -54,57 +58,113 @@ export const generateJSON = defineRoute({
 			return
 		}
 
-		try {
-			const [busStops, busServices, busRoutes, univusBusStops, nusStaticRouteData] =
-				await Promise.all([
-					generateBusStopsJSON(),
-					generateBusServicesJSON(),
-					generateBusRoutesJSON(),
-					fetchUnivusBusStops(),
-					fetchNUSStaticRouteData(),
-				])
+		// A run takes minutes, past Cloudflare's 125 s proxy timeout, so reply now and let the
+		// caller poll GET /generate-json/last-run (docs/adr/0003).
+		const run = startGenerateJSONRun(generateStaticCatalogue)
 
-			if (!busStops || !busServices || !busRoutes || !univusBusStops || !nusStaticRouteData) {
-				throw new Error("Failed to fetch raw bus data")
-			}
-
-			const ltaServiceNos = new Set(busServices.map((service) => service.ServiceNo))
-			const transformedBusStops = await transformBusStops(
-				busStops,
-				busRoutes,
-				nusStaticRouteData,
-				univusBusStops,
-				ltaServiceNos,
-			)
-
-			const transformedBusServices = await transformBusServices(
-				busRoutes,
-				busServices,
-				transformedBusStops.data,
-				nusStaticRouteData,
-			)
-
-			await writeJSON("bus-stops", transformedBusStops)
-			await writeJSON("bus-services", transformedBusServices)
-			await publishRouteDistanceIndex(transformedBusServices)
-
-			ctx.status = 201
+		if (!run.started) {
+			ctx.status = 409
 			ctx.body = {
-				message: "JSON files generated",
+				message: "JSON generation is already running",
+				startedAt: run.startedAt,
+			}
+			return
+		}
+
+		run.done.then(({ status, error }) => {
+			if (status === "failed") {
+				console.error("❌ Error generating JSON:", error)
+				return
 			}
 
 			setTimeout(() => {
 				console.log("Restarting server...")
 				process.exit()
 			}, 5000)
-		} catch (error) {
-			console.error("❌ Error generating JSON:", error)
-			ctx.status = 500
-			ctx.body = "Internal Server Error"
-			return
+		})
+
+		ctx.status = 202
+		ctx.body = {
+			message: "JSON generation started",
+			startedAt: run.startedAt,
 		}
 	},
 })
+
+async function generateStaticCatalogue(): Promise<TGenerateJSONSummary> {
+	const startedAt = Date.now()
+	const [busStops, busServices, busRoutes, univusBusStops, nusStaticRouteData] =
+		await Promise.all([
+			generateBusStopsJSON(),
+			generateBusServicesJSON(),
+			generateBusRoutesJSON(),
+			fetchUnivusBusStops(),
+			fetchNUSStaticRouteData(),
+		])
+
+	if (!busStops || !busServices || !busRoutes || !univusBusStops || !nusStaticRouteData) {
+		throw new Error("Failed to fetch raw bus data")
+	}
+
+	const ltaServiceNos = new Set(busServices.map((service) => service.ServiceNo))
+	const transformedBusStops = await transformBusStops(
+		busStops,
+		busRoutes,
+		nusStaticRouteData,
+		univusBusStops,
+		ltaServiceNos,
+	)
+
+	const transformedBusServices = await transformBusServices(
+		busRoutes,
+		busServices,
+		transformedBusStops.data,
+		nusStaticRouteData,
+	)
+
+	const routePolylines = await getRoutePolylines(transformedBusServices.data, nusStaticRouteData)
+	const busServicesWithPolylines: TBusServiceJSON = {
+		...transformedBusServices,
+		data: transformedBusServices.data.map((busService) => ({
+			...busService,
+			routePolylines:
+				routePolylines.polylines.get(busService.serviceNo) ??
+				busService.routes?.map(() => null),
+		})),
+	}
+
+	await writeJSON("bus-stops", transformedBusStops)
+	await writeJSON("bus-services", busServicesWithPolylines)
+	const routeDistanceIndex = await publishRouteDistanceIndex(busServicesWithPolylines)
+
+	return {
+		durationSeconds: roundTo((Date.now() - startedAt) / 1000, 1),
+		busStops: transformedBusStops.data.length,
+		busServices: busServicesWithPolylines.data.length,
+		routeDistanceIndex,
+		routePolylines: routePolylines.summary,
+	}
+}
+
+// Route Shapes are optional: an unexpected failure leaves every polyline unknown instead of
+// failing the catalogue.
+async function getRoutePolylines(
+	busServices: TBusService[],
+	nusStaticRouteData: TNUSStaticRouteData,
+): Promise<TRoutePolylineResult> {
+	try {
+		return await buildRoutePolylines(
+			busServices,
+			new Map(nusStaticRouteData.map((route) => [route.serviceNo, route.checkpoints])),
+		)
+	} catch (error) {
+		console.error("❌ Error building route polylines:", error)
+		return {
+			polylines: new Map(),
+			summary: { ...createEmptySummary(), error: String(error) },
+		}
+	}
+}
 
 type TNUSStaticRoute = {
 	serviceNo: string
