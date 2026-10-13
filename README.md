@@ -28,7 +28,8 @@ The beta server runs from `docker-compose.beta.yml` behind a Cloudflare Tunnel p
 cp .env.example .env   # then fill in the values
 docker compose -f docker-compose.beta.yml up -d --build
 curl http://localhost:8088/
-curl -X POST http://localhost:8088/generate-json --header "secret: $SECRET"
+curl -X POST http://localhost:8088/generate-json --header "secret: $SECRET"   # replies 202 and runs for several minutes
+curl http://localhost:8088/generate-json/last-run --header "secret: $SECRET"   # status and summary of the latest run
 ```
 
 To publish the route distance index from beta, put a service account key at `secrets/firebase-sa.json` and set `GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/firebase-sa.json` in `.env`.

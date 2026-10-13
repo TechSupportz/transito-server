@@ -28,7 +28,7 @@ export const getBusService = defineRoute({
 		}
 
 		if (!includeRoutes) {
-			const { routes, ...busServiceWithoutRoutes } = busService
+			const { routes, routePolylines, ...busServiceWithoutRoutes } = busService
 
 			ctx.status = 200
 			ctx.body = {

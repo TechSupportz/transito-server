@@ -2,6 +2,7 @@
 *.json
 !tsconfig.app.json
 !tsconfig.test.json
+!test/fixtures/**/*.json
 json/*.json
 
 # Announcement store

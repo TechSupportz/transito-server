@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "fs/promises"
+import { tmpdir } from "os"
+import path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Settings } from "luxon"
 
@@ -10,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 	fetchUnivusBusStops: vi.fn(),
 	fetchNUSCheckpoints: vi.fn(),
 	publishRouteDistanceIndex: vi.fn(),
+	buildRoutePolylines: vi.fn(),
 	writeJSON: vi.fn(),
 }))
 
@@ -38,6 +42,16 @@ vi.mock("@utils/route-distance-index-upload", () => ({
 	publishRouteDistanceIndex: mocks.publishRouteDistanceIndex,
 }))
 
+vi.mock("@utils/route-shapes", async () => {
+	const actual =
+		await vi.importActual<typeof import("../../src/utils/route-shapes")>("@utils/route-shapes")
+
+	return {
+		...actual,
+		buildRoutePolylines: mocks.buildRoutePolylines,
+	}
+})
+
 vi.mock("@fetchers/univus-maps-data-fetcher", () => ({
 	fetchUnivusBusStops: mocks.fetchUnivusBusStops,
 }))
@@ -60,20 +74,29 @@ vi.mock("@utils/nus-mappings", async () => {
 
 describe("generateJSON", () => {
 	const originalSecret = process.env.SECRET
+	const originalDataDir = process.env.DATA_DIR
 	const originalLocale = Settings.defaultLocale
+	let dataDir: string
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		dataDir = await mkdtemp(path.join(tmpdir(), "transito-generate-json-"))
+		process.env.DATA_DIR = dataDir
+
 		vi.useFakeTimers()
 		vi.setSystemTime(new Date("2024-01-02T03:04:05.000Z"))
 		vi.resetAllMocks()
+		vi.spyOn(process, "exit").mockImplementation((() => undefined) as never)
 
 		Settings.defaultLocale = "en-SG"
 		process.env.SECRET = "test-secret"
 		mocks.writeJSON.mockResolvedValue(undefined)
 	})
 
-	afterEach(() => {
+	afterEach(async () => {
 		vi.useRealTimers()
+		vi.restoreAllMocks()
+		await rm(dataDir, { recursive: true, force: true })
+		process.env.DATA_DIR = originalDataDir
 		Settings.defaultLocale = originalLocale
 		process.env.SECRET = originalSecret
 	})
@@ -228,8 +251,17 @@ describe("generateJSON", () => {
 			{ latitude: 1.21, longitude: 103.71, isbusstop: true },
 		])
 		mocks.publishRouteDistanceIndex.mockResolvedValue("uploaded")
+		const { createEmptySummary } = await import("../../src/utils/route-shapes")
+		const routePolylineSummary = { ...createEmptySummary(), directions: 2 }
+		mocks.buildRoutePolylines.mockResolvedValue({
+			polylines: new Map([["10", ["_p~iF~ps|U_ulLnnqC"]]]),
+			summary: routePolylineSummary,
+		})
 
 		const { generateJSON } = await import("../../src/routes/generateJSON")
+		const { getActiveGenerateJSONRun, readLastGenerateJSONRun } = await import(
+			"../../src/utils/generate-json-runs"
+		)
 		const ctx = {
 			request: {
 				headers: {
@@ -240,8 +272,36 @@ describe("generateJSON", () => {
 
 		await generateJSON.handler(ctx)
 
-		expect(ctx.status).toBe(201)
-		expect(ctx.body).toEqual({ message: "JSON files generated" })
+		expect(ctx.status).toBe(202)
+		expect(ctx.body).toEqual({
+			message: "JSON generation started",
+			startedAt: "2024-01-02T03:04:05.000Z",
+		})
+
+		const secondCtx = { request: { headers: { secret: "test-secret" } } } as any
+		await generateJSON.handler(secondCtx)
+		expect(secondCtx.status).toBe(409)
+
+		await getActiveGenerateJSONRun()?.done
+		expect(await readLastGenerateJSONRun()).toEqual({
+			startedAt: "2024-01-02T03:04:05.000Z",
+			finishedAt: "2024-01-02T03:04:05.000Z",
+			status: "succeeded",
+			summary: {
+				durationSeconds: 0,
+				busStops: 4,
+				busServices: 2,
+				routeDistanceIndex: "uploaded",
+				routePolylines: routePolylineSummary,
+			},
+		})
+		expect(getActiveGenerateJSONRun()).toBeNull()
+		await vi.advanceTimersByTimeAsync(5000)
+		expect(process.exit).toHaveBeenCalled()
+		expect(mocks.buildRoutePolylines).toHaveBeenCalledWith(
+			expect.any(Array),
+			new Map([["A1", expect.any(Array)]]),
+		)
 		expect(mocks.writeJSON).toHaveBeenCalledTimes(2)
 		expect(mocks.publishRouteDistanceIndex).toHaveBeenCalledWith(
 			mocks.writeJSON.mock.calls[1][1],
@@ -379,6 +439,7 @@ describe("generateJSON", () => {
 							},
 						],
 					],
+					routePolylines: ["_p~iF~ps|U_ulLnnqC"],
 				},
 				{
 					serviceNo: "A1",
@@ -453,8 +514,61 @@ describe("generateJSON", () => {
 							},
 						],
 					],
+					routePolylines: [null],
 				},
 			],
 		})
+	})
+})
+
+describe("generateJSON failures", () => {
+	const originalSecret = process.env.SECRET
+	const originalDataDir = process.env.DATA_DIR
+	let dataDir: string
+
+	beforeEach(async () => {
+		vi.resetAllMocks()
+		dataDir = await mkdtemp(path.join(tmpdir(), "transito-generate-json-"))
+		process.env.DATA_DIR = dataDir
+		process.env.SECRET = "test-secret"
+		vi.spyOn(process, "exit").mockImplementation((() => undefined) as never)
+		vi.spyOn(console, "error").mockImplementation(() => {})
+	})
+
+	afterEach(async () => {
+		vi.restoreAllMocks()
+		await rm(dataDir, { recursive: true, force: true })
+		process.env.DATA_DIR = originalDataDir
+		process.env.SECRET = originalSecret
+	})
+
+	it("records a failed run without writing files or restarting", async () => {
+		mocks.generateBusStopsJSON.mockRejectedValue(new Error("LTA is down"))
+
+		const { generateJSON } = await import("../../src/routes/generateJSON")
+		const { getActiveGenerateJSONRun } = await import("../../src/utils/generate-json-runs")
+		const { getLastGenerateJSONRun } = await import("../../src/routes/getLastGenerateJSONRun")
+		const ctx = { request: { headers: { secret: "test-secret" } } } as any
+
+		await generateJSON.handler(ctx)
+		const lastRunWhileRunning = {} as any
+		await getLastGenerateJSONRun.handler(lastRunWhileRunning)
+		await getActiveGenerateJSONRun()?.done
+		const lastRunCtx = {} as any
+		await getLastGenerateJSONRun.handler(lastRunCtx)
+
+		expect(ctx.status).toBe(202)
+		expect(lastRunWhileRunning.body.data).toEqual({
+			startedAt: ctx.body.startedAt,
+			status: "running",
+		})
+		expect(lastRunCtx.body.data).toEqual({
+			startedAt: ctx.body.startedAt,
+			finishedAt: expect.any(String),
+			status: "failed",
+			error: "Error: LTA is down",
+		})
+		expect(mocks.writeJSON).not.toHaveBeenCalled()
+		expect(process.exit).not.toHaveBeenCalled()
 	})
 })

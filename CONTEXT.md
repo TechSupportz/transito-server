@@ -56,6 +56,10 @@ _Avoid_: Estimated distance
 A compact copy of every service route's stop sequence and **Route Distances**, published for the app to measure how far a bus is from a stop along its route.
 _Avoid_: Distance cache, route geometry
 
+**Route Shape**:
+The road-following path a **Service Route** travels, published with the **Static Catalogue** as an encoded polyline so the app can draw the route on a map.
+_Avoid_: Route geometry, route line
+
 **Route Marker**:
 A route-specific pickup point identifier that marks a position in a service route but is not a separate bus stop.
 _Avoid_: Bus Stop, Provider Source
@@ -109,6 +113,8 @@ _Avoid_: Network outage, connection down
 - A **Service Route** may have unknown **Route Distance** when the provider does not supply one.
 - A **Service Route** may contain **Route Markers** that resolve to real **Bus Stops**.
 - The **Route Distance Index** is derived from the **Static Catalogue** and only includes **Service Routes** whose **Route Distance** is known and never decreases.
+- A **Service Route** may have an unknown **Route Shape** when no provider supplies one that matches its stops.
+- A **Route Shape** is never part of the **Route Distance Index**.
 - A **Bus Arrival** is live operational data, not part of the static service catalogue.
 - A **Bus Arrival** may have **Arrival Enrichment**, but remains valid without it.
 - An **Outage** is detected independently on each device from that device's own requests; it is never shared between users or stored by the server.

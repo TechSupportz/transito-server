@@ -28,6 +28,8 @@ export const BusServiceSchema = z.object({
 	isSingleRoute: z.boolean(),
 	interchanges: z.array(BasicBusStopSchema).length(2),
 	routes: z.array(z.array(BusRouteStopSchema)).max(2).optional(),
+	// One Google encoded polyline (precision 5) per route, in the same order; null when unknown.
+	routePolylines: z.array(z.string().nullable()).max(2).optional(),
 })
 
 export const BusServiceJSONSchema = z.object({
