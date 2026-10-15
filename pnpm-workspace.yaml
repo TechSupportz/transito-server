@@ -4,3 +4,7 @@ allowBuilds:
   protobufjs: false
   sharp: true
   workerd: true
+
+# miniflare (via wrangler) pins sharp 0.35.4, which has CVE-2026-96889 in librsvg
+overrides:
+  sharp: ^0.35.5

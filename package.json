@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"dev": "nodemon -r tsconfig-paths/register ./src/server.ts",
+		"dev": "nodemon --exec tsx ./src/server.ts",
 		"build": "rm -rf dist/* && tsc -p tsconfig.app.json",
 		"start": "node -r module-alias/register dist/server.js",
 		"docker:build": "docker compose up --build",
@@ -26,16 +26,16 @@
 		"@app-types": "dist/types",
 		"@utils": "dist/utils"
 	},
-	"packageManager": "pnpm@11.5.0",
+	"packageManager": "pnpm@12.10.1",
 	"dependencies": {
 		"@koa/cors": "^5.0.0",
-		"@koa/router": "^15.4.0",
+		"@koa/router": "^15.7.0",
 		"@mapbox/polyline": "^1.2.1",
-		"dotenv": "^17.4.2",
+		"dotenv": "^18.0.6",
 		"fast-xml-parser": "^5.11.2",
 		"firebase-admin": "^14.5.0",
-		"geolib": "^3.3.14",
-		"koa": "^3.2.0",
+		"geolib": "^4.0.0",
+		"koa": "^3.2.1",
 		"koa-bodyparser": "^4.4.1",
 		"koa-json": "^2.0.2",
 		"koa-logger": "^4.0.0",
@@ -44,23 +44,22 @@
 		"minisearch": "^7.2.0",
 		"module-alias": "^2.3.4",
 		"simplify-js": "^1.2.4",
-		"zod": "^4.3.6"
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
-		"@types/koa": "^3.0.2",
+		"@types/koa": "^3.0.3",
 		"@types/koa-bodyparser": "^4.3.13",
 		"@types/koa-json": "^2.0.24",
 		"@types/koa-logger": "^3.1.5",
 		"@types/koa__cors": "^5.0.1",
-		"@types/lodash": "^4.17.24",
-		"@types/luxon": "^3.7.1",
+		"@types/lodash": "^4.17.25",
+		"@types/luxon": "^3.7.6",
 		"@types/mapbox__polyline": "^1.0.5",
-		"@types/node": "^25.6.0",
+		"@types/node": "^26.6.4",
 		"nodemon": "^3.1.14",
-		"ts-node": "^10.9.2",
-		"tsconfig-paths": "^4.2.0",
-		"typescript": "^6.0.3",
-		"vitest": "^4.1.7",
-		"wrangler": "^4.86.0"
+		"tsx": "^4.23.15",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3",
+		"wrangler": "^4.148.0"
 	}
 }

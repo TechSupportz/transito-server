@@ -1,5 +1,5 @@
 import { defineRoute } from "@utils/route-builder"
-import getDistance from "geolib/es/getDistance"
+import { getDistance } from "geolib"
 import { z } from "zod"
 import { busStops } from "@json"
 import { NearbyBusStopSchema, TNearbyBusStop } from "@app-types/bus-stop-type"
