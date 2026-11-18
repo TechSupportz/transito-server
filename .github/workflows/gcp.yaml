@@ -5,8 +5,40 @@ on:
         branches: [main]
 
 jobs:
-    deploy:
+    verify:
         if: ${{ !contains(github.event.head_commit.message, '--skip-ci') }}
+        name: Verify
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: "read"
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            # pnpm's version comes from packageManager in package.json.
+            - uses: pnpm/action-setup@v6
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 26
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            # The Static Catalogue is gitignored but imported by type-check and tests, as in the dockerfile.
+            - name: Write placeholder Static Catalogue
+              run: |
+                  echo '{ "metadata": "", "data": [] }' > src/json/bus-services.json
+                  echo '{ "metadata": "", "data": [] }' > src/json/bus-stops.json
+
+            - run: pnpm exec tsc -p tsconfig.app.json --noEmit
+            - run: pnpm exec tsc -p tsconfig.test.json
+            - run: pnpm test
+
+    deploy:
+        needs: verify
         name: Deploy
         runs-on: ubuntu-latest
 
@@ -36,10 +68,25 @@ jobs:
                   echo SECRET=${{ secrets.JSON_SECRET }} >> .env
                   echo PORT=80 >> .env
 
-            - name: Build and push image to Artifact Registry
+            - name: Build image
+              run: docker compose build
+
+            # The server must boot from the image before it replaces the one on the VM.
+            - name: Smoke-test image
               run: |
-                  docker compose build
-                  docker compose push
+                  docker run -d --name smoke -p 8080:80 -e PORT=80 "$(docker compose config --images | head -n 1)"
+                  for attempt in $(seq 1 15); do
+                      if curl -fsS http://localhost:8080/ | grep -q "Transito's server is running as expected"; then
+                          docker rm -f smoke
+                          exit 0
+                      fi
+                      sleep 2
+                  done
+                  docker logs smoke
+                  exit 1
+
+            - name: Push image to Artifact Registry
+              run: docker compose push
 
             - name: Restart Cloud Engine to use new image
               run: |

@@ -9,7 +9,9 @@ export function getHaversineDistanceKm(
 	const dLng = toRadians(to.longitude - from.longitude)
 	const h =
 		Math.sin(dLat / 2) ** 2 +
-		Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.sin(dLng / 2) ** 2
+		Math.cos(toRadians(from.latitude)) *
+			Math.cos(toRadians(to.latitude)) *
+			Math.sin(dLng / 2) ** 2
 
 	return 2 * EARTH_MEAN_RADIUS_KM * Math.asin(Math.sqrt(h))
 }
@@ -47,4 +49,22 @@ export function getPointToSegmentDistanceM(
 		lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, -(a.x * dx + a.y * dy) / lengthSquared))
 
 	return Math.hypot(a.x + t * dx, a.y + t * dy)
+}
+
+// Rough Singapore bounding box. A position outside it, such as (0, 0), is bad upstream data.
+const SINGAPORE_BOUNDS = {
+	minLatitude: 1.1,
+	maxLatitude: 1.5,
+	minLongitude: 103.5,
+	maxLongitude: 104.2,
+}
+
+/** Whether a position from an NUS feed is a real one in Singapore. */
+export function isInSingapore({ latitude, longitude }: { latitude: number; longitude: number }) {
+	return (
+		latitude >= SINGAPORE_BOUNDS.minLatitude &&
+		latitude <= SINGAPORE_BOUNDS.maxLatitude &&
+		longitude >= SINGAPORE_BOUNDS.minLongitude &&
+		longitude <= SINGAPORE_BOUNDS.maxLongitude
+	)
 }

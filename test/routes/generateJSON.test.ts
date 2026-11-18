@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 	fetchNUSCheckpoints: vi.fn(),
 	publishRouteDistanceIndex: vi.fn(),
 	buildRoutePolylines: vi.fn(),
-	writeJSON: vi.fn(),
+	writeStaticCatalogue: vi.fn(),
 }))
 
 vi.mock("@fetchers/bus-routes-fetcher", () => ({
@@ -57,14 +57,12 @@ vi.mock("@fetchers/univus-maps-data-fetcher", () => ({
 }))
 
 vi.mock("@utils/write-json", () => ({
-	writeJSON: mocks.writeJSON,
+	writeStaticCatalogue: mocks.writeStaticCatalogue,
 }))
 
 vi.mock("@utils/nus-mappings", async () => {
 	const actual =
-		await vi.importActual<typeof import("../../src/utils/nus-mappings")>(
-			"@utils/nus-mappings",
-		)
+		await vi.importActual<typeof import("../../src/utils/nus-mappings")>("@utils/nus-mappings")
 
 	return {
 		...actual,
@@ -73,32 +71,32 @@ vi.mock("@utils/nus-mappings", async () => {
 })
 
 describe("generateJSON", () => {
-	const originalSecret = process.env.SECRET
-	const originalDataDir = process.env.DATA_DIR
 	const originalLocale = Settings.defaultLocale
 	let dataDir: string
 
 	beforeEach(async () => {
 		dataDir = await mkdtemp(path.join(tmpdir(), "transito-generate-json-"))
-		process.env.DATA_DIR = dataDir
+		vi.stubEnv("DATA_DIR", dataDir)
 
 		vi.useFakeTimers()
 		vi.setSystemTime(new Date("2024-01-02T03:04:05.000Z"))
+		// The run reservation is module state, so each test starts from a fresh module.
+		vi.resetModules()
 		vi.resetAllMocks()
 		vi.spyOn(process, "exit").mockImplementation((() => undefined) as never)
+		vi.spyOn(console, "log").mockImplementation(() => {})
+		vi.spyOn(console, "error").mockImplementation(() => {})
 
 		Settings.defaultLocale = "en-SG"
-		process.env.SECRET = "test-secret"
-		mocks.writeJSON.mockResolvedValue(undefined)
+		mocks.writeStaticCatalogue.mockResolvedValue(undefined)
 	})
 
 	afterEach(async () => {
 		vi.useRealTimers()
+		vi.unstubAllEnvs()
 		vi.restoreAllMocks()
 		await rm(dataDir, { recursive: true, force: true })
-		process.env.DATA_DIR = originalDataDir
 		Settings.defaultLocale = originalLocale
-		process.env.SECRET = originalSecret
 	})
 
 	it("transforms raw bus data and writes generated JSON files", async () => {
@@ -239,17 +237,18 @@ describe("generateJSON", () => {
 			},
 		]
 
+		const nusCheckpoints = [
+			{ latitude: 1.2, longitude: 103.7, isbusstop: true },
+			{ latitude: 1.2, longitude: 103.71, isbusstop: null },
+			{ latitude: 1.21, longitude: 103.71, isbusstop: true },
+		]
 		mocks.generateBusStopsJSON.mockResolvedValue(rawBusStops)
 		mocks.generateBusServicesJSON.mockResolvedValue(rawBusServices)
 		mocks.generateBusRoutesJSON.mockResolvedValue(rawBusRoutes)
 		mocks.fetchUnivusBusStops.mockResolvedValue(univusBusStops)
 		mocks.fetchNUSPickupPoints.mockResolvedValue(nusPickupPoints)
 		mocks.fetchNUSRouteMinMaxTimes.mockResolvedValue(nusTimes)
-		mocks.fetchNUSCheckpoints.mockResolvedValue([
-			{ latitude: 1.2, longitude: 103.7, isbusstop: true },
-			{ latitude: 1.2, longitude: 103.71, isbusstop: null },
-			{ latitude: 1.21, longitude: 103.71, isbusstop: true },
-		])
+		mocks.fetchNUSCheckpoints.mockResolvedValue(nusCheckpoints)
 		mocks.publishRouteDistanceIndex.mockResolvedValue("uploaded")
 		const { createEmptySummary } = await import("../../src/utils/route-shapes")
 		const routePolylineSummary = { ...createEmptySummary(), directions: 2 }
@@ -259,16 +258,9 @@ describe("generateJSON", () => {
 		})
 
 		const { generateJSON } = await import("../../src/routes/generateJSON")
-		const { getActiveGenerateJSONRun, readLastGenerateJSONRun } = await import(
-			"../../src/utils/generate-json-runs"
-		)
-		const ctx = {
-			request: {
-				headers: {
-					secret: "test-secret",
-				},
-			},
-		} as any
+		const { getLastGenerateJSONRun } = await import("../../src/routes/getLastGenerateJSONRun")
+		const { getActiveGenerateJSONRun } = await import("../../src/utils/generate-json-runs")
+		const ctx = {} as any
 
 		await generateJSON.handler(ctx)
 
@@ -278,12 +270,14 @@ describe("generateJSON", () => {
 			startedAt: "2024-01-02T03:04:05.000Z",
 		})
 
-		const secondCtx = { request: { headers: { secret: "test-secret" } } } as any
+		const secondCtx = {} as any
 		await generateJSON.handler(secondCtx)
 		expect(secondCtx.status).toBe(409)
 
 		await getActiveGenerateJSONRun()?.done
-		expect(await readLastGenerateJSONRun()).toEqual({
+		const lastRunCtx = {} as any
+		await getLastGenerateJSONRun.handler(lastRunCtx)
+		expect(lastRunCtx.body.data).toEqual({
 			startedAt: "2024-01-02T03:04:05.000Z",
 			finishedAt: "2024-01-02T03:04:05.000Z",
 			status: "succeeded",
@@ -295,251 +289,234 @@ describe("generateJSON", () => {
 				routePolylines: routePolylineSummary,
 			},
 		})
-		expect(getActiveGenerateJSONRun()).toBeNull()
+
+		// The run keeps its reservation until the restart, so a refresh now cannot be killed by it.
+		const duringRestartCtx = {} as any
+		await generateJSON.handler(duringRestartCtx)
+		expect(duringRestartCtx.status).toBe(409)
+		expect(duringRestartCtx.body.startedAt).toBe("2024-01-02T03:04:05.000Z")
+
+		expect(process.exit).not.toHaveBeenCalled()
 		await vi.advanceTimersByTimeAsync(5000)
 		expect(process.exit).toHaveBeenCalled()
 		expect(mocks.buildRoutePolylines).toHaveBeenCalledWith(
 			expect.any(Array),
-			new Map([["A1", expect.any(Array)]]),
+			new Map([["A1", nusCheckpoints]]),
 		)
-		expect(mocks.writeJSON).toHaveBeenCalledTimes(2)
+		expect(mocks.writeStaticCatalogue).toHaveBeenCalledTimes(1)
 		expect(mocks.publishRouteDistanceIndex).toHaveBeenCalledWith(
-			mocks.writeJSON.mock.calls[1][1],
+			mocks.writeStaticCatalogue.mock.calls[0][0].busServices,
 		)
-		expect(mocks.writeJSON).toHaveBeenNthCalledWith(1, "bus-stops", {
-			metadata: expect.any(String),
-			data: [
-				{
-					code: "10001",
-					name: "Main Int",
-					roadName: "Main Rd",
-					latitude: 1.3,
-					longitude: 103.8,
-					services: ["10"],
-					sources: { LTA: "10001" },
-					searchTags: ["interchange"],
-				},
-				{
-					code: "10002",
-					name: "Opp Main Rd",
-					roadName: "Loop Rd",
-					latitude: 1.31,
-					longitude: 103.81,
-					services: ["10"],
-					sources: { LTA: "10002" },
-					searchTags: ["opposite", "road"],
-				},
-				{
-					code: "16181",
-					name: "Central Lib",
-					roadName: "Kent Ridge Cres",
-					latitude: 1.296,
-					longitude: 103.773,
-					services: ["A1"],
-					sources: { LTA: "16181", NUS: "CLB" },
-					searchTags: [
-						"library",
-						"CLB",
-						"Central Library",
-					],
-				},
-				{
-					code: "NUS1",
-					name: "A1 Title 1",
-					roadName: "NUS A1 Title 1",
-					latitude: 1.22,
-					longitude: 103.72,
-					services: ["A1"],
-					sources: { NUS: "NUS1" },
-					searchTags: [
-						"NUS1",
-						"A1 Pickup 1",
-						"A1 Long 1",
-						"A1 Short 1",
-						"NUS1",
-						"Univus NUS1",
-						"A1 Title 1",
-					],
-				},
-			],
-		})
-		expect(mocks.writeJSON).toHaveBeenNthCalledWith(2, "bus-services", {
-			metadata: expect.any(String),
-			data: [
-				{
-					serviceNo: "10",
-					interchanges: [
-						{
-							code: "10001",
-							name: "Main Int",
-							roadName: "Main Rd",
-							latitude: 1.3,
-							longitude: 103.8,
-							sources: { LTA: "10001" },
-						},
-						{
-							code: "10002",
-							name: "Opp Main Rd",
-							roadName: "Loop Rd",
-							latitude: 1.31,
-							longitude: 103.81,
-							sources: { LTA: "10002" },
-						},
-					],
-					operator: "SBST",
-					isLoopService: false,
-					isSingleRoute: true,
-					routes: [
-						[
+		expect(mocks.writeStaticCatalogue).toHaveBeenCalledWith({
+			busStops: {
+				metadata: expect.any(String),
+				data: [
+					{
+						code: "10001",
+						name: "Main Int",
+						roadName: "Main Rd",
+						latitude: 1.3,
+						longitude: 103.8,
+						services: ["10"],
+						sources: { LTA: "10001" },
+						searchTags: ["interchange"],
+					},
+					{
+						code: "10002",
+						name: "Opp Main Rd",
+						roadName: "Loop Rd",
+						latitude: 1.31,
+						longitude: 103.81,
+						services: ["10"],
+						sources: { LTA: "10002" },
+						searchTags: ["opposite", "road"],
+					},
+					{
+						code: "16181",
+						name: "Central Lib",
+						roadName: "Kent Ridge Cres",
+						latitude: 1.296,
+						longitude: 103.773,
+						services: ["A1"],
+						sources: { LTA: "16181", NUS: "CLB" },
+						searchTags: ["library", "CLB", "Central Library"],
+					},
+					{
+						code: "NUS1",
+						name: "A1 Title 1",
+						roadName: "NUS A1 Title 1",
+						latitude: 1.22,
+						longitude: 103.72,
+						services: ["A1"],
+						sources: { NUS: "NUS1" },
+						searchTags: [
+							"NUS1",
+							"A1 Pickup 1",
+							"A1 Long 1",
+							"A1 Short 1",
+							"NUS1",
+							"Univus NUS1",
+							"A1 Title 1",
+						],
+					},
+				],
+			},
+			busServices: {
+				metadata: expect.any(String),
+				data: [
+					{
+						serviceNo: "10",
+						interchanges: [
 							{
-								busStop: {
-									code: "10001",
-									name: "Main Int",
-									roadName: "Main Rd",
-									latitude: 1.3,
-									longitude: 103.8,
-									sources: { LTA: "10001" },
-								},
-								direction: 1,
-								sequence: 1,
-								distance: 0,
-								firstBus: {
-									weekdays: "05:30",
-									saturday: "06:00",
-									sunday: "07:00",
-								},
-								lastBus: {
-									weekdays: "23:30",
-									saturday: "23:00",
-									sunday: "22:30",
-								},
+								code: "10001",
+								name: "Main Int",
+								roadName: "Main Rd",
+								latitude: 1.3,
+								longitude: 103.8,
+								sources: { LTA: "10001" },
 							},
 							{
-								busStop: {
-									code: "10002",
-									name: "Opp Main Rd",
-									roadName: "Loop Rd",
-									latitude: 1.31,
-									longitude: 103.81,
-									sources: { LTA: "10002" },
-								},
-								direction: 1,
-								sequence: 2,
-								distance: 1.2,
-								firstBus: {
-									weekdays: "05:35",
-									saturday: "06:05",
-									sunday: "07:05",
-								},
-								lastBus: {
-									weekdays: "23:35",
-									saturday: "23:05",
-									sunday: "22:35",
-								},
+								code: "10002",
+								name: "Opp Main Rd",
+								roadName: "Loop Rd",
+								latitude: 1.31,
+								longitude: 103.81,
+								sources: { LTA: "10002" },
 							},
 						],
-					],
-					routePolylines: ["_p~iF~ps|U_ulLnnqC"],
-				},
-				{
-					serviceNo: "A1",
-					interchanges: [
-						{
-							code: "NUS1",
-							name: "A1 Title 1",
-							roadName: "NUS A1 Title 1",
-							latitude: 1.22,
-							longitude: 103.72,
-							sources: { NUS: "NUS1" },
-						},
-						{
-							code: "16181",
-							name: "Central Lib",
-							roadName: "Kent Ridge Cres",
-							latitude: 1.296,
-							longitude: 103.773,
-							sources: { LTA: "16181", NUS: "CLB" },
-						},
-					],
-					operator: "NUS",
-					isLoopService: false,
-					isSingleRoute: true,
-					routes: [
-						[
+						operator: "SBST",
+						isLoopService: false,
+						isSingleRoute: true,
+						routes: [
+							[
+								{
+									busStop: {
+										code: "10001",
+										name: "Main Int",
+										roadName: "Main Rd",
+										latitude: 1.3,
+										longitude: 103.8,
+										sources: { LTA: "10001" },
+									},
+									direction: 1,
+									sequence: 1,
+									distance: 0,
+									firstBus: {
+										weekdays: "05:30",
+										saturday: "06:00",
+										sunday: "07:00",
+									},
+									lastBus: {
+										weekdays: "23:30",
+										saturday: "23:00",
+										sunday: "22:30",
+									},
+								},
+								{
+									busStop: {
+										code: "10002",
+										name: "Opp Main Rd",
+										roadName: "Loop Rd",
+										latitude: 1.31,
+										longitude: 103.81,
+										sources: { LTA: "10002" },
+									},
+									direction: 1,
+									sequence: 2,
+									distance: 1.2,
+									firstBus: {
+										weekdays: "05:35",
+										saturday: "06:05",
+										sunday: "07:05",
+									},
+									lastBus: {
+										weekdays: "23:35",
+										saturday: "23:05",
+										sunday: "22:35",
+									},
+								},
+							],
+						],
+						routePolylines: ["_p~iF~ps|U_ulLnnqC"],
+					},
+					{
+						serviceNo: "A1",
+						interchanges: [
 							{
-								busStop: {
-									code: "NUS1",
-									name: "A1 Title 1",
-									roadName: "NUS A1 Title 1",
-									latitude: 1.22,
-									longitude: 103.72,
-									sources: { NUS: "NUS1" },
-								},
-								direction: 1,
-								sequence: 1,
-								distance: 0,
-								firstBus: {
-									weekdays: "07:00",
-									saturday: "08:00",
-									sunday: "09:00",
-								},
-								lastBus: {
-									weekdays: "23:00",
-									saturday: "22:00",
-									sunday: "21:00",
-								},
+								code: "NUS1",
+								name: "A1 Title 1",
+								roadName: "NUS A1 Title 1",
+								latitude: 1.22,
+								longitude: 103.72,
+								sources: { NUS: "NUS1" },
 							},
 							{
-								busStop: {
-									code: "16181",
-									name: "Central Lib",
-									roadName: "Kent Ridge Cres",
-									latitude: 1.296,
-									longitude: 103.773,
-									sources: { LTA: "16181", NUS: "CLB" },
-								},
-								direction: 1,
-								sequence: 2,
-								distance: 2.224,
-								firstBus: {
-									weekdays: "07:00",
-									saturday: "08:00",
-									sunday: "09:00",
-								},
-								lastBus: {
-									weekdays: "23:00",
-									saturday: "22:00",
-									sunday: "21:00",
-								},
+								code: "16181",
+								name: "Central Lib",
+								roadName: "Kent Ridge Cres",
+								latitude: 1.296,
+								longitude: 103.773,
+								sources: { LTA: "16181", NUS: "CLB" },
 							},
 						],
-					],
-					routePolylines: [null],
-				},
-			],
+						operator: "NUS",
+						isLoopService: false,
+						isSingleRoute: true,
+						routes: [
+							[
+								{
+									busStop: {
+										code: "NUS1",
+										name: "A1 Title 1",
+										roadName: "NUS A1 Title 1",
+										latitude: 1.22,
+										longitude: 103.72,
+										sources: { NUS: "NUS1" },
+									},
+									direction: 1,
+									sequence: 1,
+									distance: 0,
+									firstBus: {
+										weekdays: "07:00",
+										saturday: "08:00",
+										sunday: "09:00",
+									},
+									lastBus: {
+										weekdays: "23:00",
+										saturday: "22:00",
+										sunday: "21:00",
+									},
+								},
+								{
+									busStop: {
+										code: "16181",
+										name: "Central Lib",
+										roadName: "Kent Ridge Cres",
+										latitude: 1.296,
+										longitude: 103.773,
+										sources: { LTA: "16181", NUS: "CLB" },
+									},
+									direction: 1,
+									sequence: 2,
+									distance: 2.224,
+									firstBus: {
+										weekdays: "07:00",
+										saturday: "08:00",
+										sunday: "09:00",
+									},
+									lastBus: {
+										weekdays: "23:00",
+										saturday: "22:00",
+										sunday: "21:00",
+									},
+								},
+							],
+						],
+						routePolylines: [null],
+					},
+				],
+			},
 		})
-	})
-})
-
-describe("generateJSON failures", () => {
-	const originalSecret = process.env.SECRET
-	const originalDataDir = process.env.DATA_DIR
-	let dataDir: string
-
-	beforeEach(async () => {
-		vi.resetAllMocks()
-		dataDir = await mkdtemp(path.join(tmpdir(), "transito-generate-json-"))
-		process.env.DATA_DIR = dataDir
-		process.env.SECRET = "test-secret"
-		vi.spyOn(process, "exit").mockImplementation((() => undefined) as never)
-		vi.spyOn(console, "error").mockImplementation(() => {})
-	})
-
-	afterEach(async () => {
-		vi.restoreAllMocks()
-		await rm(dataDir, { recursive: true, force: true })
-		process.env.DATA_DIR = originalDataDir
-		process.env.SECRET = originalSecret
 	})
 
 	it("records a failed run without writing files or restarting", async () => {
@@ -548,12 +525,13 @@ describe("generateJSON failures", () => {
 		const { generateJSON } = await import("../../src/routes/generateJSON")
 		const { getActiveGenerateJSONRun } = await import("../../src/utils/generate-json-runs")
 		const { getLastGenerateJSONRun } = await import("../../src/routes/getLastGenerateJSONRun")
-		const ctx = { request: { headers: { secret: "test-secret" } } } as any
+		const ctx = {} as any
 
 		await generateJSON.handler(ctx)
 		const lastRunWhileRunning = {} as any
 		await getLastGenerateJSONRun.handler(lastRunWhileRunning)
 		await getActiveGenerateJSONRun()?.done
+		await vi.advanceTimersByTimeAsync(5000)
 		const lastRunCtx = {} as any
 		await getLastGenerateJSONRun.handler(lastRunCtx)
 
@@ -564,11 +542,17 @@ describe("generateJSON failures", () => {
 		})
 		expect(lastRunCtx.body.data).toEqual({
 			startedAt: ctx.body.startedAt,
-			finishedAt: expect.any(String),
+			finishedAt: "2024-01-02T03:04:05.000Z",
 			status: "failed",
 			error: "Error: LTA is down",
 		})
-		expect(mocks.writeJSON).not.toHaveBeenCalled()
+		expect(mocks.writeStaticCatalogue).not.toHaveBeenCalled()
 		expect(process.exit).not.toHaveBeenCalled()
+
+		// A failed run releases its reservation so the operator can retry at once.
+		const retryCtx = {} as any
+		await generateJSON.handler(retryCtx)
+		expect(retryCtx.status).toBe(202)
+		await getActiveGenerateJSONRun()?.done
 	})
 })

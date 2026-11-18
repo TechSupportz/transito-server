@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "fs/promises"
 import path from "path"
+import { getDataDir } from "@utils/data-dir"
 import {
 	GenerateJSONRunSchema,
 	TGenerateJSONRun,
@@ -9,19 +10,24 @@ import {
 // A run outlives Cloudflare's 125 s proxy timeout, so callers start it and read the outcome later.
 // The record is kept on the data volume because a successful run restarts the server.
 function getLastRunPath() {
-	const dataDir = process.env.DATA_DIR || path.join(__dirname, "../../data")
-	return path.join(dataDir, "last-generate-json-run.json")
+	return path.join(getDataDir(), "last-generate-json-run.json")
 }
 
-let activeRun: { startedAt: string; done: Promise<TGenerateJSONRun> } | null = null
+type TActiveRun = { startedAt: string; done?: Promise<TGenerateJSONRun>; finished: boolean }
 
+// Set while a run goes and, after a success, until the process exits to load the new catalogue,
+// so a second run cannot start and then be killed by that restart.
+let activeRun: TActiveRun | null = null
+
+/** The run still generating, or null once it has finished and its record is saved. */
 export function getActiveGenerateJSONRun() {
-	return activeRun
+	return activeRun && !activeRun.finished ? activeRun : null
 }
 
 /**
- * Starts `generate` in the background unless a run is already going, recording the run's status
- * as it starts and finishes. Never rejects: a failure is recorded as a failed run.
+ * Starts `generate` in the background unless a run is already going or a successful run is
+ * waiting for its restart, recording the run's status as it starts and finishes. Never rejects:
+ * a failure is recorded as a failed run.
  */
 export function startGenerateJSONRun(generate: () => Promise<TGenerateJSONSummary>) {
 	if (activeRun) {
@@ -29,6 +35,9 @@ export function startGenerateJSONRun(generate: () => Promise<TGenerateJSONSummar
 	}
 
 	const startedAt = new Date().toISOString()
+	const reservation: TActiveRun = { startedAt, finished: false }
+	activeRun = reservation
+
 	const done = (async (): Promise<TGenerateJSONRun> => {
 		let run: TGenerateJSONRun
 
@@ -51,11 +60,17 @@ export function startGenerateJSONRun(generate: () => Promise<TGenerateJSONSummar
 			console.error("❌ Error saving the generate-json run:", error)
 		}
 
-		activeRun = null
+		// A successful run keeps its reservation: the server restarts next (src/routes/generateJSON.ts).
+		if (run.status === "succeeded") {
+			reservation.finished = true
+		} else {
+			activeRun = null
+		}
+
 		return run
 	})()
 
-	activeRun = { startedAt, done }
+	reservation.done = done
 	return { started: true as const, startedAt, done }
 }
 

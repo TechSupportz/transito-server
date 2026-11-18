@@ -1,6 +1,6 @@
 import { generateSearchTags, getBusStopFromCode } from "@utils/bus-stops"
 import { defineRoute } from "@utils/route-builder"
-import { writeJSON } from "@utils/write-json"
+import { writeStaticCatalogue } from "@utils/write-json"
 import { appendUniqueValues } from "@utils/array"
 import { groupBy } from "lodash"
 import { DateTime } from "luxon"
@@ -46,18 +46,8 @@ import { TGenerateJSONSummary } from "@app-types/generate-json-run-type"
 export const generateJSON = defineRoute({
 	method: "post",
 	path: "/generate-json",
-	validate: {
-		headers: z.object({ secret: z.string() }),
-	},
+	requiresSecret: true,
 	handler: async (ctx) => {
-		const { secret } = ctx.request.headers
-
-		if (secret !== process.env.SECRET) {
-			ctx.status = 401
-			ctx.body = "Unauthorized"
-			return
-		}
-
 		// A run takes minutes, past Cloudflare's 125 s proxy timeout, so reply now and let the
 		// caller poll GET /generate-json/last-run (docs/adr/0003).
 		const run = startGenerateJSONRun(generateStaticCatalogue)
@@ -133,8 +123,10 @@ async function generateStaticCatalogue(): Promise<TGenerateJSONSummary> {
 		})),
 	}
 
-	await writeJSON("bus-stops", transformedBusStops)
-	await writeJSON("bus-services", busServicesWithPolylines)
+	await writeStaticCatalogue({
+		busStops: transformedBusStops,
+		busServices: busServicesWithPolylines,
+	})
 	const routeDistanceIndex = await publishRouteDistanceIndex(busServicesWithPolylines)
 
 	return {

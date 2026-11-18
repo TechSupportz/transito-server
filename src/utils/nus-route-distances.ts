@@ -1,13 +1,5 @@
 import { TNUSCheckpoint } from "@app-types/univus-type"
-import { getHaversineDistanceKm, roundTo } from "@utils/geo"
-
-// Rough Singapore bounding box. Anything outside it, including (0, 0), is a bad checkpoint.
-const SINGAPORE_BOUNDS = {
-	minLatitude: 1.1,
-	maxLatitude: 1.5,
-	minLongitude: 103.5,
-	maxLongitude: 104.2,
-}
+import { getHaversineDistanceKm, isInSingapore, roundTo } from "@utils/geo"
 
 /**
  * Cumulative distance (km) of each stop along an NUS service route, measured along the
@@ -64,13 +56,4 @@ export function getNUSRouteStopDistances(
 	}
 
 	return distances
-}
-
-function isInSingapore({ latitude, longitude }: TNUSCheckpoint) {
-	return (
-		latitude >= SINGAPORE_BOUNDS.minLatitude &&
-		latitude <= SINGAPORE_BOUNDS.maxLatitude &&
-		longitude >= SINGAPORE_BOUNDS.minLongitude &&
-		longitude <= SINGAPORE_BOUNDS.maxLongitude
-	)
 }

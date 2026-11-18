@@ -1,92 +1,97 @@
 # AGENTS.md - Transito Server
 
-Koa + TypeScript API behind the Transito app. It serves a weekly-generated Static Catalogue of bus
-stops and services and relays live NUS arrivals. Domain terms (Bus Stop, Provider Source, Outage,
-Announcement, Route Distance Index, ...) are defined in `CONTEXT.md`; use them in code, comments and
-replies. Decisions and their reasons live in `docs/adr/`; read the relevant ADR before changing
-behaviour it covers.
+Koa + TypeScript API behind the Transito app: it serves the weekly-generated Static Catalogue and
+relays live NUS arrivals. Domain terms (Bus Stop, Static Catalogue, Outage, Announcement, Route
+Distance Index, ...) are defined in `CONTEXT.md`; use them in code, comments and replies.
 
-## Working rules
+## Running the dev stack
 
-- The user runs the local dev stack with the fish alias `transito-dev`; leave `pnpm dev` and
-  long-running servers to them. Before asking them to start it, check port 8080 is listening
-  (`lsof -nP -iTCP:8080 -sTCP:LISTEN`).
-- Treat `.env` and `secrets/` as opaque: reference variables by name (see `.env.example`) and keep
-  their values out of output, logs and commits.
-- Leave deploys and production calls to the user: pushes to `main` (CI deploys them), `docker
-  compose` against `docker-compose.yml`, `wrangler deploy`, and requests to
-  `transito-api.tnitish.com` or `beta-transito-api.tnitish.com`.
+- The dev stack (Transito server on 8080, Firebase emulators with the UI on 4000) runs in the tmux
+  session `transito`. When a task needs it and `tmux has-session -t transito` fails, start it with
+  `fish ~/Developer/Transito/dev-env.fish` (the user's `transito-dev` alias). Read a pane's logs
+  with `tmux capture-pane -p -t transito:0.0` (server) or `transito:0.1` (emulators).
+- The server pane runs `pnpm run dev` under nodemon, which restarts on source changes; after an
+  edit, read the server pane's logs rather than starting a second server on 8080.
+- In T3 Code, do work that needs changes to `../transito_flutter` in a new thread in the
+  `transito_flutter` project, with a self-contained brief, rather than editing the app from a
+  server thread.
+
+## User-owned actions
+
+- Deploys and production calls are the user's: pushes to `main` (CI builds the image and resets the
+  GCE VM), `docker compose` against `docker-compose.yml` (CI's file; beta uses
+  `docker-compose.beta.yml`), `wrangler deploy`, and requests to `transito-api.tnitish.com` or
+  `beta-transito-api.tnitish.com`.
+- Values in `.env` and `secrets/` stay with the user: refer to variables by name (`.env.example`
+  lists them) and keep values out of output, logs and commits.
 - Commits: show the staged diff and a message drafted with the `emoji-git-commit` skill, then wait
   for approval. Commit messages carry no `Co-Authored-By` trailer.
 
-## Verify
+## Verification
+
+A code change is done when these pass:
 
 ```bash
-pnpm test                                      # Vitest, test/ mirrors src/
+pnpm test
 pnpm exec tsc -p tsconfig.app.json --noEmit    # type-check src
 pnpm exec tsc -p tsconfig.test.json            # type-check tests
 ```
 
-Formatting follows `.prettierrc` (tabs, no semicolons, width 100). Add tests for data
-transformation, upstream parsing and failure mapping; tests mock fetchers with `vi.mock` on the
-path alias (see `test/routes/generateJSON.test.ts`).
+- Add tests for data transformation, upstream parsing and failure mapping, at the `test/` path
+  matching the source. Mock fetchers with `vi.mock` on the path alias, as
+  `test/routes/generateJSON.test.ts` does.
+- Format to `.prettierrc`.
 
 ## Architecture
 
-- `src/server.ts` registers every route with `buildRoute`; a new route is defined with
-  `defineRoute` and added there.
-- `src/routes/`: handlers. `src/fetchers/`: one module per upstream call, validated with Zod via
-  `zodFetch` or the Univus proxy. `src/utils/`: shared logic. `src/types/`: Zod schemas and their
-  inferred `T*` types.
-- `src/json/*.json` is the generated Static Catalogue: gitignored, yet imported at startup and by
-  type-check. A fresh worktree needs it; copy it from the main checkout or write the empty
-  placeholders the `dockerfile` does.
-- Path aliases `@routes`, `@fetchers`, `@utils`, `@app-types`, `@json` are declared three times:
-  `tsconfig.json` (dev), `_moduleAliases` in `package.json` (built `dist/`), and
-  `vitest.config.ts`. Change all three together.
-- `workers/transito-refresh/`: Cloudflare cron worker that starts `POST /generate-json` weekly, polls
-  `GET /generate-json/last-run` every minute, and reports the run's summary on Telegram.
+- Define a route with `defineRoute` and register it with `buildRoute` in `src/server.ts`. Protect
+  operator-only routes with `requiresSecret: true`, as `src/routes/alerts/putAnnouncement.ts` does.
+- Upstream calls live in `src/fetchers/`, validated with Zod via `zodFetch` or the Univus proxy;
+  schemas and their inferred `T*` types live in `src/types/`.
+- Path aliases (`@routes`, `@fetchers`, `@utils`, `@app-types`, `@json`) are declared once per
+  runtime: `tsconfig.json` (dev), `_moduleAliases` in `package.json` (built `dist/`), and
+  `vitest.config.ts` (tests). Change all three together.
+- A run saves the Static Catalogue as one file, `static-catalogue.json` in the data directory
+  (`DATA_DIR`, `/app/data` in the container), and `src/json/index.ts` serves it from there at
+  startup, so it survives restarts and new images. `src/json/bus-stops.json` and
+  `src/json/bus-services.json` are the bundled fallback for before any run succeeds: gitignored,
+  yet imported by type-check and tests. A fresh worktree needs them; copy them from the main
+  checkout or write the empty placeholders the `dockerfile` does.
 
-## Conventions
+## Static Catalogue generation
 
-- `generateJSON` orchestrates the Static Catalogue build. Put new catalogue logic in its own module
-  under `src/fetchers/` or `src/utils/` and call it from `generateJSON`, as the fetchers and
-  `publishRouteDistanceIndex` are, so the route file stays an orchestrator.
-- Required data failing fails the whole run before any file is written, so the previous complete
-  catalogue stays in place. Optional data degrades instead: NUS checkpoints leave Route Distance
-  unknown, Route Shapes fall back or stay null
-  (`docs/adr/0003-build-route-shapes-from-lta-kml-with-onemap-fallback.md`), and the index upload
-  is best effort.
+`POST /generate-json` (`src/routes/generateJSON.ts`) builds the catalogue. The Cloudflare cron
+worker in `workers/transito-refresh/` starts it weekly, polls `GET /generate-json/last-run` every
+minute, and reports the run's summary on Telegram; the production VM's `startup.sh` calls it on
+every boot.
+
+- Keep `generateJSON` an orchestrator: put new catalogue logic in its own module under
+  `src/fetchers/` or `src/utils/` and call it from there.
+- Required data is fetched and checked before any file is written, so a failed fetch leaves the
+  previous catalogue in place. Optional data degrades instead: missing NUS checkpoints leave Route
+  Distance unknown, and Route Shapes fall back or stay null
+  (`docs/adr/0003-build-route-shapes-from-lta-kml-with-onemap-fallback.md`).
 - `POST /generate-json` replies 202 and runs in the background, because a run outlasts Cloudflare's
-  125 s proxy timeout; a second request while one runs gets 409. The run's status and summary are
-  saved to `last-generate-json-run.json` in the data directory for `GET /generate-json/last-run`.
+  125 s proxy timeout; a second request while one runs, or before a successful run's restart, gets
+  409. The run's status and summary are saved to `last-generate-json-run.json` in the data
+  directory for `GET /generate-json/last-run`.
 - A successful run exits the process after 5 seconds so its container restarts with the new
   catalogue.
-- Protect operator-only routes with `requiresSecret: true` (see `src/routes/alerts/putAnnouncement.ts`).
+- The run ends by publishing the Route Distance Index to Firebase Storage, best effort. Read
+  `docs/adr/0002-publish-route-distance-index-to-firebase-storage.md` before changing it; a change
+  to the index shape needs a new object path (`route-distances/v2.json.gz`).
+- Run local generation with `ENV=dev`, which uploads the index only to the emulator at
+  `FIREBASE_STORAGE_EMULATOR_HOST`. Without `ENV=dev` or the emulator, Google application default
+  credentials on the machine can upload to the production bucket. `README.md` lists the variables.
 
-## Upstream failures
+## NUS failures
 
-Apps detect Outages per device from their own requests; the server stores none
-(`docs/adr/0001-detect-outages-per-device.md`). The app calls LTA directly, so the server's job is
-NUS:
+Read `docs/adr/0001-detect-outages-per-device.md` before changing failure handling: apps detect
+Outages per device from their own requests, and the server stores none. The app calls LTA directly,
+so the server's part is NUS:
 
 - Calls through the Univus bus proxy (`src/fetchers/univus-bus-proxy-fetcher.ts`) throw
-  `UpstreamError` (`src/utils/upstream-error.ts`), with `timedOut` set from `isTimeoutError`.
-- Routes map `UpstreamError` to 504 when timed out (never an Outage) and 502 otherwise, and keep
-  500 for the server's own failures. Canonical example: `src/routes/univus/getNUSBusArrivals.ts`.
-- Optional Arrival Enrichment falls back to an empty value instead of failing the arrival.
-
-## Route Distance Index
-
-`generateJSON` ends by publishing the index to Firebase Storage, best effort
-(`docs/adr/0002-publish-route-distance-index-to-firebase-storage.md`, `README.md` for env vars).
-Run local generation with `ENV=dev`, which uploads only when `FIREBASE_STORAGE_EMULATOR_HOST` is
-set; without `ENV=dev`, any Google credentials on the machine upload to the production bucket. A
-change to the index shape needs a new object path (`v2`).
-
-## Deployment
-
-- Production: pushes to `main` build and push the GCP image from `docker-compose.yml`, then reset
-  the GCE VM, whose `startup.sh` runs it. `docker-compose.yml` is CI's file only.
-- Beta: `docker-compose.beta.yml` on relic-01, behind a Cloudflare Tunnel at
-  `beta-transito-api.tnitish.com`.
+  `UpstreamError` (`src/utils/upstream-error.ts`), with `timedOut` set on timeouts.
+- Live NUS routes map `UpstreamError` to 504 when timed out (never an Outage) and 502 otherwise,
+  and keep 500 for the server's own failures. Follow `src/routes/univus/getNUSBusArrivals.ts`.
+- Optional Arrival Enrichment falls back to an empty value so the arrival still returns.

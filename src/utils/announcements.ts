@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "fs/promises"
 import path from "path"
+import { getDataDir } from "@utils/data-dir"
 import {
 	AnnouncementListSchema,
 	TAnnouncement,
@@ -7,8 +8,7 @@ import {
 } from "@app-types/announcement-type"
 
 function getAnnouncementsPath() {
-	const dataDir = process.env.DATA_DIR || path.join(__dirname, "../../data")
-	return path.join(dataDir, "announcements.json")
+	return path.join(getDataDir(), "announcements.json")
 }
 
 // Serialises writes so concurrent admin requests cannot drop each other's changes

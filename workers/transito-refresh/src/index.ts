@@ -48,6 +48,12 @@ const DIRECTIONS_PER_LINE = 50;
 const POLL_INTERVAL_MS = 60_000;
 // Scheduled Workers get 15 minutes of wall time; leave a minute to send the report.
 const POLL_DEADLINE_MS = 14 * 60_000;
+// A hung request must not eat the minute kept for the report.
+const REQUEST_TIMEOUT_MS = 30_000;
+// A server from before background runs answers the POST only when the run ends, and Cloudflare's
+// proxy gives up at 125 s, so wait just past that.
+// TODO: drop once every server replies 202.
+const LEGACY_START_TIMEOUT_MS = 130_000;
 
 export default {
 	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
@@ -60,7 +66,9 @@ export default {
 	},
 
 	async refresh(env: Env, time: string): Promise<string[]> {
-		const pollStartedAt = Date.now();
+		const deadline = Date.now() + POLL_DEADLINE_MS;
+		const remainingMs = () => Math.max(0, deadline - Date.now());
+		const requestSignal = (timeoutMs = REQUEST_TIMEOUT_MS) => AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, remainingMs())));
 		let startedAt: string;
 
 		try {
@@ -69,9 +77,15 @@ export default {
 				headers: {
 					secret: env.REFRESH_SECRET,
 				},
+				signal: requestSignal(LEGACY_START_TIMEOUT_MS),
 			});
 			const body = await res.text();
 			console.log(body);
+
+			// A server from before background runs replies 201 once the run has finished.
+			if (res.status === 201) {
+				return formatSuccess(time, undefined);
+			}
 
 			// 409 means a run is already going, which this worker can report on all the same.
 			if (res.status !== 202 && res.status !== 409) {
@@ -85,12 +99,18 @@ export default {
 
 		let lastSeen = 'no answer yet';
 
-		while (Date.now() - pollStartedAt < POLL_DEADLINE_MS) {
-			await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+		let isLastPoll = false;
+
+		while (!isLastPoll) {
+			// Keep a request's worth of time so the last poll lands before the deadline.
+			const sleepMs = Math.min(POLL_INTERVAL_MS, Math.max(0, remainingMs() - REQUEST_TIMEOUT_MS));
+			isLastPoll = sleepMs < POLL_INTERVAL_MS;
+			await new Promise((resolve) => setTimeout(resolve, sleepMs));
 
 			try {
 				const res = await fetch(`${env.BASE_URL}/generate-json/last-run`, {
 					headers: { secret: env.REFRESH_SECRET },
+					signal: requestSignal(),
 				});
 
 				// The server restarts after a successful run, so a failed poll is retried.
@@ -152,9 +172,7 @@ function formatSuccess(time: string, summary: RefreshSummary | undefined): strin
 	}
 
 	lines.push(
-		escape(
-			`⏱️ ${formatDuration(summary.durationSeconds)} · ${summary.busStops ?? '?'} stops · ${summary.busServices ?? '?'} services`,
-		),
+		escape(`⏱️ ${formatDuration(summary.durationSeconds)} · ${summary.busStops ?? '?'} stops · ${summary.busServices ?? '?'} services`),
 	);
 
 	const indexFailed = summary.routeDistanceIndex === 'failed';

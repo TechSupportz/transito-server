@@ -16,7 +16,8 @@
 	"license": "ISC",
 	"nodemonConfig": {
 		"ignore": [
-			"**/json/**"
+			"**/json/**",
+			"data/**"
 		]
 	},
 	"_moduleAliases": {
@@ -27,6 +28,9 @@
 		"@utils": "dist/utils"
 	},
 	"packageManager": "pnpm@12.10.1",
+	"engines": {
+		"node": ">=26 <27"
+	},
 	"dependencies": {
 		"@koa/cors": "^5.0.0",
 		"@koa/router": "^15.7.0",

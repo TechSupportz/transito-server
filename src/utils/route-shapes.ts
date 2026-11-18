@@ -2,7 +2,7 @@ import polyline from "@mapbox/polyline"
 import simplify from "simplify-js"
 import { TBusRouteStop } from "@app-types/bus-route-type"
 import { TBusService } from "@app-types/bus-service-type"
-import { TOneMapBusRoutesResponse } from "@app-types/one-map-type"
+import { TOneMapBusRouteSegment, TOneMapBusRoutesResponse } from "@app-types/one-map-type"
 import { TLatLng, TRoutePolylineIssue, TRoutePolylineSummary } from "@app-types/route-shape-type"
 import { TNUSCheckpoint } from "@app-types/univus-type"
 import {
@@ -12,7 +12,12 @@ import {
 } from "@fetchers/lta-route-kml-fetcher"
 import { fetchOneMapBusRoutes } from "@fetchers/one-map-bus-route-fetcher"
 import { getBusServiceFromServiceNo } from "@utils/bus-services"
-import { getHaversineDistanceKm, getPointToSegmentDistanceM, roundTo } from "@utils/geo"
+import {
+	getHaversineDistanceKm,
+	getPointToSegmentDistanceM,
+	isInSingapore,
+	roundTo,
+} from "@utils/geo"
 
 // Thresholds from the October 2026 survey of every LTA KML (docs/adr/0003).
 // A stop this far from its line means the KML draws a different route.
@@ -21,6 +26,8 @@ export const MAX_STOP_DISTANCE_M = 500
 export const SUSPECT_STOP_DISTANCE_M = 300
 // A gap this wide after joining LineStrings means a piece is missing.
 export const MAX_JOIN_GAP_M = 300
+// Consecutive points of a road line this far apart mean a stray point, such as one at (0, 0).
+export const MAX_POINT_STEP_M = 5000
 // About 5 m; encoding at precision 5 already rounds to about 1 m.
 export const SIMPLIFY_TOLERANCE_DEGREES = 0.000045
 
@@ -38,7 +45,10 @@ export type TRoutePolylineResult = {
 type TDirection = {
 	id: string
 	service: TBusService
+	/** Slot in `service.routes` and `routePolylines`. */
 	index: number
+	/** LTA's direction number, which names the upstream KML file and OneMap route. */
+	sourceDirection: number
 	stops: TBusRouteStop[]
 }
 
@@ -63,12 +73,18 @@ export async function buildRoutePolylines(
 	const startedAt = Date.now()
 	const summary = createEmptySummary()
 	const directions = busServices.flatMap((service) =>
-		(service.routes ?? []).map((stops, index): TDirection => ({
-			id: `${service.serviceNo}-${index + 1}`,
-			service,
-			index,
-			stops,
-		})),
+		(service.routes ?? []).map((stops, index): TDirection => {
+			// A service with only direction 2 keeps it in slot 0.
+			const sourceDirection = stops[0]?.direction ?? index + 1
+
+			return {
+				id: `${service.serviceNo}-${sourceDirection}`,
+				service,
+				index,
+				sourceDirection,
+				stops,
+			}
+		}),
 	)
 	const outcomes = new Map<string, TOutcome>()
 
@@ -297,33 +313,106 @@ async function getOneMapLines(
 		}
 
 		const segments =
-			(direction.index === 0 ? routes.BUS_DIRECTION_ONE : routes.BUS_DIRECTION_TWO) ?? []
-		const oneMapStopCodes = segments.length
-			? [
-					segments[0].START_BUS_STOP_NUM,
-					...segments.map((segment) => segment.END_BUS_STOP_NUM),
-				]
-			: []
-		const stopCodes = direction.stops.map((stop) => stop.busStop.code)
+			(direction.sourceDirection === 1
+				? routes.BUS_DIRECTION_ONE
+				: routes.BUS_DIRECTION_TWO) ?? []
 
-		// Only an exact stop match proves OneMap's route is current; a mismatch is a stale route.
-		if (oneMapStopCodes.join() !== stopCodes.join()) {
-			results.set(direction.id, {
-				ok: false,
-				reason: segments.length
-					? `stops differ (${oneMapStopCodes.length} vs ${stopCodes.length})`
-					: "has no route for this direction",
-			})
-			continue
-		}
-
-		results.set(direction.id, {
-			ok: true,
-			line: segments.flatMap((segment) => polyline.decode(segment.GEOMETRIES) as TLatLng[]),
-		})
+		results.set(direction.id, getOneMapLine(segments, direction.stops))
 	}
 
 	return results
+}
+
+/**
+ * Joins OneMap's stop-to-stop segments when they run exactly between the direction's stops, in
+ * order, and each segment's geometry is a plausible road line between its two stops.
+ */
+export function getOneMapLine(
+	segments: TOneMapBusRouteSegment[],
+	stops: TBusRouteStop[],
+): { ok: true; line: TLatLng[] } | { ok: false; reason: string } {
+	if (segments.length === 0) {
+		return { ok: false, reason: "has no route for this direction" }
+	}
+
+	// Only an exact stop match proves OneMap's route is current; a mismatch is a stale route.
+	const isSameRoute =
+		segments.length === stops.length - 1 &&
+		segments.every(
+			(segment, index) =>
+				segment.START_BUS_STOP_NUM === stops[index].busStop.code &&
+				segment.END_BUS_STOP_NUM === stops[index + 1].busStop.code,
+		)
+
+	if (!isSameRoute) {
+		return { ok: false, reason: `stops differ (${segments.length + 1} vs ${stops.length})` }
+	}
+
+	const line: TLatLng[] = []
+
+	for (const [index, segment] of segments.entries()) {
+		const reason = checkSegment(segment, stops[index], stops[index + 1], line)
+
+		if (reason) {
+			return { ok: false, reason: `segment ${index + 1} ${reason}` }
+		}
+	}
+
+	const candidate = checkLine(line, stops)
+	return candidate.ok ? { ok: true, line } : { ok: false, reason: candidate.reason }
+}
+
+/** Decodes a segment onto `line`, or returns why its geometry is unusable. */
+function checkSegment(
+	segment: TOneMapBusRouteSegment,
+	from: TBusRouteStop,
+	to: TBusRouteStop,
+	line: TLatLng[],
+): string | null {
+	let points: TLatLng[]
+
+	try {
+		points = polyline.decode(segment.GEOMETRIES) as TLatLng[]
+	} catch {
+		return "has malformed geometry"
+	}
+
+	if (points.length < 2) {
+		return "has fewer than 2 points"
+	}
+
+	// Checked before re-encoding: the encoder never finishes on an infinite coordinate, which a
+	// long run of continuation characters decodes to.
+	if (!points.every(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng))) {
+		return "has non-finite points"
+	}
+
+	// The decoder accepts a truncated string; OneMap's encoding round-trips exactly when whole.
+	if (polyline.encode(points) !== segment.GEOMETRIES) {
+		return "has malformed geometry"
+	}
+
+	for (let index = 1; index < points.length; index++) {
+		if (getDistanceM(points[index - 1], points[index]) > MAX_POINT_STEP_M) {
+			return `jumps more than ${MAX_POINT_STEP_M} m between points`
+		}
+	}
+
+	if (
+		getDistanceM(points[0], getStopPoint(from)) > MAX_STOP_DISTANCE_M ||
+		getDistanceM(points[points.length - 1], getStopPoint(to)) > MAX_STOP_DISTANCE_M
+	) {
+		return `does not run from stop ${from.busStop.code} to ${to.busStop.code}`
+	}
+
+	const gapM = line.length ? getDistanceM(line[line.length - 1], points[0]) : 0
+
+	if (gapM > MAX_JOIN_GAP_M) {
+		return `starts ${Math.round(gapM)} m from where the previous segment ends`
+	}
+
+	line.push(...points)
+	return null
 }
 
 function getNUSCandidate(
@@ -332,6 +421,11 @@ function getNUSCandidate(
 ): TCandidate {
 	if (!checkpoints?.length) {
 		return { ok: false, reason: "unavailable" }
+	}
+
+	// The same guard that leaves the NUS Route Distance unknown (src/utils/nus-route-distances.ts).
+	if (!checkpoints.every(isInSingapore)) {
+		return { ok: false, reason: "have missing or out-of-range positions" }
 	}
 
 	return checkLine(
@@ -432,8 +526,12 @@ function getFallbackOutcome(
 /** The previous catalogue's polyline, only while the direction still serves the same stops. */
 function getPreviousPolyline(direction: TDirection) {
 	const previous = getBusServiceFromServiceNo(direction.service.serviceNo)
-	const previousStops = previous?.routes?.[direction.index]
-	const previousPolyline = previous?.routePolylines?.[direction.index]
+	// Match by LTA direction: a service that drops direction 1 moves direction 2 to slot 0.
+	const previousIndex =
+		previous?.routes?.findIndex((stops) => stops[0]?.direction === direction.sourceDirection) ??
+		-1
+	const previousStops = previous?.routes?.[previousIndex]
+	const previousPolyline = previous?.routePolylines?.[previousIndex]
 
 	if (!previousStops || !previousPolyline) {
 		return null

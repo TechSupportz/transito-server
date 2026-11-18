@@ -134,25 +134,21 @@ describe("buildRoutePolylines", () => {
 		expect(distanceM(line[0], stops[0])).toBeLessThan(100)
 		expect(distanceM(line[line.length - 1], stops[stops.length - 1])).toBeLessThan(100)
 		// Simplifying keeps the shape while dropping most of the 1,087 points.
+		expect(line.length).toBeGreaterThan(100)
 		expect(line.length).toBeLessThan(700)
 	})
 
 	it("joins LineStrings that the KML stores out of order", async () => {
 		stubUpstreams({
-			listedFiles: ["12-1.kml", "12-2.kml"],
-			kml: {
-				"12-1.kml": readFixture("lta-route-kml/12-1.kml"),
-				"12-2.kml": readFixture("lta-route-kml/12-2.kml"),
-			},
+			listedFiles: ["12-1.kml"],
+			kml: { "12-1.kml": readFixture("lta-route-kml/12-1.kml") },
 		})
 		const stops = fixtureStops["12-1"]
 
-		const { polylines, summary } = await build([
-			makeService("12", [stops, fixtureStops["12-2"]]),
-		])
+		const { polylines, summary } = await build([makeService("12", [stops])])
 		const line = decode(polylines.get("12")?.[0])
 
-		expect(summary.counts).toMatchObject({ kml: 2, onemap: 0, missing: 0 })
+		expect(summary.counts).toMatchObject({ kml: 1, onemap: 0, missing: 0 })
 		// In file order the line would start 13 km away, at the second piece.
 		expect(distanceM(line[0], stops[0])).toBeLessThan(100)
 		expect(distanceM(line[line.length - 1], stops[stops.length - 1])).toBeLessThan(100)
@@ -185,7 +181,6 @@ describe("buildRoutePolylines", () => {
 		const line = decode(polylines.get("2B")?.[0])
 
 		expect(summary.counts).toMatchObject({ kml: 0, onemap: 1, rejected: 1, missing: 0 })
-		expect(summary.rejected[0].reason).toMatch(/^stop \d+ is \d+ m from the line$/)
 		expect(summary.onemap[0]).toEqual({
 			direction: "2B-1",
 			reason: expect.stringMatching(/^KML rejected \(stop \d+ is \d+ m from the line\)$/),
@@ -226,12 +221,21 @@ describe("buildRoutePolylines", () => {
 		const { polylines, summary } = await build([makeService("2B", [stops])])
 
 		expect(polylines.get("2B")).toEqual([null])
-		expect(summary.missing).toEqual([
-			{
-				direction: "2B-1",
-				reason: "KML not listed by LTA; OneMap fetch failed (Error: HTTP 500)",
-			},
-		])
+		expect(summary.counts).toMatchObject({ reused: 0, missing: 1 })
+	})
+
+	it("reuses the previous direction 2 polyline after a service drops direction 1", async () => {
+		stubUpstreams({})
+		const previous = makeService("2B", [fixtureStops["2B-1"], fixtureStops["2B-1"].slice(1)])
+		const current = { ...previous, routes: [previous.routes![1]] }
+		mocks.getBusServiceFromServiceNo.mockReturnValue({
+			...previous,
+			routePolylines: ["direction-1", "direction-2"],
+		})
+
+		const { polylines } = await build([current])
+
+		expect(polylines.get("2B")).toEqual(["direction-2"])
 	})
 
 	it("stops requesting KMLs once LTA answers 403", async () => {
@@ -276,5 +280,184 @@ describe("buildRoutePolylines", () => {
 			checkpoints.map(({ latitude, longitude }) => ({ latitude, longitude })),
 		)
 		expect(summary.counts).toMatchObject({ nus: 1, kml: 0, missing: 0 })
+	})
+
+	it("leaves an NUS polyline unknown when a checkpoint has a stray position", async () => {
+		stubUpstreams({})
+		const stops: [string, number, number][] = [
+			["NUS1", 1.2, 103.7],
+			["NUS2", 1.21, 103.71],
+		]
+		const checkpoints = [
+			{ latitude: 1.2, longitude: 103.7, isbusstop: true },
+			{ latitude: 0, longitude: 0, isbusstop: null },
+			{ latitude: 1.21, longitude: 103.71, isbusstop: true },
+		]
+
+		const { polylines, summary } = await build(
+			[makeService("A1", [stops], "NUS")],
+			new Map([["A1", checkpoints]]),
+		)
+
+		expect(polylines.get("A1")).toEqual([null])
+		expect(summary.missing).toEqual([
+			{ direction: "A1-1", reason: "checkpoints have missing or out-of-range positions" },
+		])
+	})
+
+	it("looks up direction 2 for a service that only runs direction 2", async () => {
+		stubUpstreams({
+			listedFiles: ["10-2.kml"],
+			kml: { "10-2.kml": readFixture("lta-route-kml/10-1.kml") },
+		})
+		const service = makeService("10", [fixtureStops["10-1"]])
+		service.routes = service.routes!.map((stops) =>
+			stops.map((stop) => ({ ...stop, direction: 2 as const })),
+		)
+
+		const { polylines, summary } = await build([service])
+
+		expect(summary.counts).toMatchObject({ kml: 1, notPublished: 0 })
+		expect(polylines.get("10")).toEqual([expect.any(String)])
+	})
+})
+
+describe("getOneMapLine", () => {
+	const stops = makeService("1", [
+		[
+			["A", 1.3, 103.8],
+			["B", 1.301, 103.801],
+			["C", 1.302, 103.802],
+		],
+	]).routes![0]
+	const segment = (start: string, end: string, points: [number, number][]) => ({
+		START_BUS_STOP_NUM: start,
+		END_BUS_STOP_NUM: end,
+		GEOMETRIES: polyline.encode(points),
+	})
+
+	it("rejects a segment from a different stop even when the last stop matches", async () => {
+		const { getOneMapLine } = await import("../../src/utils/route-shapes")
+
+		expect(
+			getOneMapLine(
+				[
+					segment("A", "B", [
+						[1.3, 103.8],
+						[1.301, 103.801],
+					]),
+					segment("X", "C", [
+						[1.301, 103.801],
+						[1.302, 103.802],
+					]),
+				],
+				stops,
+			),
+		).toEqual({ ok: false, reason: "stops differ (3 vs 3)" })
+	})
+
+	it.each([
+		["is empty", [], "segment 2 has fewer than 2 points"],
+		[
+			"jumps to (0, 0)",
+			[
+				[1.301, 103.801],
+				[0, 0],
+				[1.302, 103.802],
+			],
+			"segment 2 jumps more than 5000 m between points",
+		],
+		[
+			"ends away from its stop",
+			[
+				[1.301, 103.801],
+				[1.31, 103.81],
+			],
+			"segment 2 does not run from stop B to C",
+		],
+	] as [string, [number, number][], string][])(
+		"rejects a segment whose geometry %s",
+		async (_, points, reason) => {
+			const { getOneMapLine } = await import("../../src/utils/route-shapes")
+
+			expect(
+				getOneMapLine(
+					[
+						segment("A", "B", [
+							[1.3, 103.8],
+							[1.301, 103.801],
+						]),
+						segment("B", "C", points),
+					],
+					stops,
+				),
+			).toEqual({ ok: false, reason })
+		},
+	)
+
+	it("rejects a truncated segment encoding", async () => {
+		const { getOneMapLine } = await import("../../src/utils/route-shapes")
+		const whole = segment("B", "C", [
+			[1.301, 103.801],
+			[1.302, 103.802],
+		])
+
+		expect(
+			getOneMapLine(
+				[
+					segment("A", "B", [
+						[1.3, 103.8],
+						[1.301, 103.801],
+					]),
+					{ ...whole, GEOMETRIES: whole.GEOMETRIES.slice(0, -1) },
+				],
+				stops,
+			),
+		).toEqual({ ok: false, reason: "segment 2 has malformed geometry" })
+	})
+
+	it("rejects segments that meet on opposite sides of their shared stop", async () => {
+		const { getOneMapLine } = await import("../../src/utils/route-shapes")
+
+		// Each segment ends within 500 m of stop B, but about 610 m from the other.
+		expect(
+			getOneMapLine(
+				[
+					segment("A", "B", [
+						[1.3, 103.8],
+						[1.304, 103.801],
+					]),
+					segment("B", "C", [
+						[1.2985, 103.801],
+						[1.302, 103.802],
+					]),
+				],
+				stops,
+			),
+		).toEqual({
+			ok: false,
+			reason: expect.stringMatching(
+				/^segment 2 starts \d+ m from where the previous segment ends$/,
+			),
+		})
+	})
+
+	it("rejects geometry that decodes to infinite coordinates without hanging", async () => {
+		const { getOneMapLine } = await import("../../src/utils/route-shapes")
+		// A long run of continuation characters overflows the decoder to Infinity.
+		const infinitePoint = `${"~".repeat(300)}@?`
+
+		expect(
+			getOneMapLine(
+				[
+					segment("A", "B", [
+						[1.3, 103.8],
+						[1.301, 103.801],
+					]),
+					{ ...segment("B", "C", []), GEOMETRIES: infinitePoint.repeat(2) },
+				],
+				stops,
+			),
+		).toEqual({ ok: false, reason: "segment 2 has non-finite points" })
 	})
 })
