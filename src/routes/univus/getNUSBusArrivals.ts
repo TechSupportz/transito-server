@@ -6,7 +6,10 @@ import {
 	TNUSArrivalService,
 	TNUSShuttle,
 } from "@app-types/univus-type"
+import { TBusRouteStop } from "@app-types/bus-route-type"
+import { TBusService } from "@app-types/bus-service-type"
 import { getBusServiceFromServiceNo } from "@utils/bus-services"
+import { getNUSVisitNumber } from "@utils/nus-visit-number"
 import { defineRoute } from "@utils/route-builder"
 import { UpstreamError } from "@utils/upstream-error"
 import { DateTime } from "luxon"
@@ -86,9 +89,13 @@ async function withFallback<T>(promise: Promise<T>, fallback: T, label: string) 
 	}
 }
 
-function getRouteBoundaryCodes(routeCode: string) {
-	const busService = getBusServiceFromServiceNo(routeCode)
-	if (busService?.operator !== "NUS") {
+function getNUSBusService(serviceNo: string) {
+	const busService = getBusServiceFromServiceNo(serviceNo)
+	return busService?.operator === "NUS" ? busService : undefined
+}
+
+function getRouteBoundaryCodes(busService: TBusService | undefined) {
+	if (!busService) {
 		return { originCode: "", destinationCode: "" }
 	}
 
@@ -98,11 +105,35 @@ function getRouteBoundaryCodes(routeCode: string) {
 	}
 }
 
+// Arrival Enrichment: a failure leaves the visit unknown rather than dropping the arrival
+function getVisitNumber(
+	route: TBusRouteStop[] | undefined,
+	nusStopCode: string,
+	activeBus: TNUSActiveBus | undefined,
+) {
+	try {
+		return getNUSVisitNumber(
+			route,
+			nusStopCode,
+			activeBus ? { latitude: activeBus.lat, longitude: activeBus.lng } : undefined,
+		)
+	} catch (error) {
+		console.error(`Failed to work out NUS visit number at ${nusStopCode}:`, error)
+		return ""
+	}
+}
+
+type TArrivalContext = {
+	activeBusByPlate: Map<string, TNUSActiveBus>
+	originCode: string
+	destinationCode: string
+	route: TBusRouteStop[] | undefined
+	nusStopCode: string
+}
+
 function getArrivalBus(
 	eta: TNUSArrivalEta | undefined,
-	activeBusByPlate: Map<string, TNUSActiveBus>,
-	originCode: string,
-	destinationCode: string,
+	{ activeBusByPlate, originCode, destinationCode, route, nusStopCode }: TArrivalContext,
 ): TLTABusArrival {
 	if (!eta) {
 		return emptyArrivalBus
@@ -117,14 +148,17 @@ function getArrivalBus(
 		Monitored: activeBus ? 1 : 0,
 		Latitude: activeBus ? String(activeBus.lat) : "",
 		Longitude: activeBus ? String(activeBus.lng) : "",
-		VisitNumber: "1",
+		VisitNumber: getVisitNumber(route, nusStopCode, activeBus),
 		Load: getNUSLoad(activeBus?.loadInfo?.crowdLevel),
 		Feature: "",
 		Type: "SD", //REVIEW - Could consider this to be something diff
 	}
 }
 
-async function normalizeNUSShuttle(shuttle: TNUSShuttle): Promise<TNUSArrivalService> {
+async function normalizeNUSShuttle(
+	shuttle: TNUSShuttle,
+	nusStopCode: string,
+): Promise<TNUSArrivalService> {
 	const activeBuses = await withFallback(
 		fetchNUSActiveBuses(shuttle.name),
 		[],
@@ -133,15 +167,22 @@ async function normalizeNUSShuttle(shuttle: TNUSShuttle): Promise<TNUSArrivalSer
 	const activeBusByPlate = new Map(
 		activeBuses.map((activeBus) => [activeBus.vehplate, activeBus]),
 	)
-	const { originCode, destinationCode } = getRouteBoundaryCodes(shuttle.name)
+	const busService = getNUSBusService(shuttle.name)
+	// NUS Service Routes are single-direction
+	const arrivalContext: TArrivalContext = {
+		activeBusByPlate,
+		...getRouteBoundaryCodes(busService),
+		route: busService?.routes?.[0],
+		nusStopCode,
+	}
 	const validEtas = getValidNUSEtas(shuttle._etas)
 
 	return {
 		ServiceNo: shuttle.name,
 		Operator: "NUS",
-		NextBus: getArrivalBus(validEtas[0], activeBusByPlate, originCode, destinationCode),
-		NextBus2: getArrivalBus(validEtas[1], activeBusByPlate, originCode, destinationCode),
-		NextBus3: getArrivalBus(validEtas[2], activeBusByPlate, originCode, destinationCode),
+		NextBus: getArrivalBus(validEtas[0], arrivalContext),
+		NextBus2: getArrivalBus(validEtas[1], arrivalContext),
+		NextBus3: getArrivalBus(validEtas[2], arrivalContext),
 	}
 }
 
@@ -160,7 +201,7 @@ export const getNUSBusArrivals = defineRoute({
 				await Promise.all(
 					shuttles
 						.filter((shuttle) => !isEndingTerminalShuttle(shuttle))
-						.map(normalizeNUSShuttle),
+						.map((shuttle) => normalizeNUSShuttle(shuttle, ctx.params.code)),
 				)
 			).filter(hasAnyArrivalBus)
 
